@@ -1,0 +1,41 @@
+models:
+  llama:
+    name: meta-llama/Llama-3.1-8B-Instruct
+    type: llama
+    max_tokens: 100
+    min_tokens: 30
+    temperature: 0.7
+    top_p: 0.9
+    max_output_words: 100
+  openai:
+    name: gpt-4o
+    type: openai
+    max_tokens: 100
+    min_tokens: 30
+    temperature: 0.7
+    top_p: 0.9
+    max_output_words: 100
+api:
+  host: 127.0.0.1
+  port: 8080
+websocket:
+  host: 127.0.0.1
+  port: 8080
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+rag:
+  vector_db: chroma
+  embedding_model: sentence-transformers/all-MiniLM-L6-v2
+  collection_name: documents
+fine_tuning:
+  learning_rate: 2e-5
+  epochs: 3
+  batch_size: 4
+crowdsourcing:
+  db_path: data/crowdsourced/datasets.db
+ethics:
+  sentiment_threshold: 0.5
+  toxicity_threshold: 0.7
+cache:
+  path: data/cache/
