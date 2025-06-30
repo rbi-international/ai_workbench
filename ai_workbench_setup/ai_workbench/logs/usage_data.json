@@ -1,0 +1,24 @@
+{
+  "total_cost": 0.050495,
+  "models": {
+    "gpt-4o": {
+      "total_prompt_tokens": 8494,
+      "total_completion_tokens": 535,
+      "total_output_words": 371,
+      "total_requests": 7,
+      "total_cost": 0.050495
+    }
+  },
+  "daily_usage": {
+    "2025-06-30": {
+      "gpt-4o": {
+        "prompt_tokens": 8494,
+        "completion_tokens": 535,
+        "output_words": 371,
+        "requests": 7,
+        "cost": 0.050495
+      }
+    }
+  },
+  "last_updated": "2025-06-30T10:19:40.216358"
+}

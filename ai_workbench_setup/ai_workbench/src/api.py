@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from pydantic import BaseModel, ValidationError
 import os
 import yaml
@@ -102,22 +103,6 @@ except ImportError as e:
 
 # Load environment variables
 load_dotenv()
-
-# Initialize FastAPI app
-app = FastAPI(
-    title="AI Workbench API",
-    description="A comprehensive AI platform for text processing, translation, and chat",
-    version="1.0.0"
-)
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Global variables for components
 logger = None
@@ -333,6 +318,32 @@ def log_error(message: str):
     else:
         print(f"ERROR: {message}")
 
+# Lifespan event handler (replaces @app.on_event)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    initialize_components()
+    yield
+    # Shutdown (if needed)
+    log_info("🛑 AI Workbench API shutting down...")
+
+# Initialize FastAPI app with lifespan
+app = FastAPI(
+    title="AI Workbench API",
+    description="A comprehensive AI platform for text processing, translation, and chat",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Pydantic models for request validation
 class TaskInput(BaseModel):
     task: str
@@ -348,12 +359,6 @@ class TaskInput(BaseModel):
 class CrowdsourceInput(BaseModel):
     data: List[Dict]
     submitter: str = "anonymous"
-
-# Initialize components on startup
-@app.on_event("startup")
-async def startup_event():
-    """Initialize components when the API starts"""
-    initialize_components()
 
 # Health check endpoint
 @app.get("/health")
@@ -399,14 +404,26 @@ async def process_task(input: TaskInput):
             log_warning(f"Parameter validation failed: {e}")
             params = input.params
         
-        # Retrieve context if available
+        # Retrieve context if available (FIXED RAG INTEGRATION)
         context = []
-        if retriever and input.text:
-            try:
-                context = retriever.retrieve(input.text)
-                log_info(f"Retrieved {len(context)} context documents")
-            except Exception as e:
-                log_warning(f"Context retrieval failed: {e}")
+        if retriever:
+            # Determine query text for context retrieval
+            query_text = ""
+            if input.text:
+                query_text = input.text
+            elif input.messages and len(input.messages) > 0:
+                # For chat, use the last user message
+                last_msg = input.messages[-1]
+                if last_msg.get("role") == "user":
+                    query_text = last_msg.get("content", "")
+            
+            # Retrieve context if we have query text
+            if query_text:
+                try:
+                    context = retriever.retrieve(query_text)
+                    log_info(f"Retrieved {len(context)} context documents for query: {query_text[:50]}...")
+                except Exception as e:
+                    log_warning(f"Context retrieval failed: {e}")
         
         # Process based on task type
         if input.task == "summarization":
@@ -484,12 +501,14 @@ async def process_task(input: TaskInput):
             if not messages:
                 raise HTTPException(status_code=400, detail="Messages are required for chat")
             
-            # Add context to the last user message if available
+            # Add context to the last user message if available (ENHANCED RAG)
             if context and messages:
                 last_message = messages[-1]
                 if last_message.get("role") == "user":
                     context_text = "\n".join([doc.get("text", "") for doc in context])
-                    last_message["content"] += f"\n\nRelevant context: {context_text}"
+                    # Add context in a more natural way
+                    last_message["content"] += f"\n\nRelevant information from uploaded documents:\n{context_text}"
+                    log_info(f"Added context from {len(context)} documents to chat message")
             
             results = chatter.chat(messages, params)
             

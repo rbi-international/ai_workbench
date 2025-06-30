@@ -1,0 +1,9 @@
+{
+  "response": "Could you please specify which report you are referring to? There are many types of reports in various fields such as business, science, technology, etc. If you provide more context or details, I would be happy to help you with information related to that specific report.",
+  "inference_time": 1.387742280960083,
+  "usage": {
+    "prompt_tokens": 150,
+    "completion_tokens": 53,
+    "total_tokens": 203
+  }
+}

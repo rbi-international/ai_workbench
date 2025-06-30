@@ -90,10 +90,10 @@ def get_api_urls(config):
     """Get API URLs from configuration"""
     if not config:
         # Fallback URLs
-        base_url = "http://localhost:8080"
+        base_url = "http://127.0.0.1:8000"
     else:
-        host = config.get("api", {}).get("host", "localhost")
-        port = config.get("api", {}).get("port", 8080)
+        host = config.get("api", {}).get("host", "127.0.0.1")
+        port = config.get("api", {}).get("port", 8000)
         base_url = f"http://{host}:{port}"
     
     return {
@@ -495,6 +495,12 @@ def main():
             }[x]
         )
         
+        # Initialize variables
+        text_input = ""
+        reference = ""
+        target_lang = None
+        messages = []
+        
         # Task-specific inputs
         if task == "summarization":
             st.markdown("### 📝 Text Summarization")
@@ -508,8 +514,6 @@ def main():
                 height=100,
                 help="Provide a reference summary for evaluation"
             )
-            target_lang = None
-            messages = None
             
         elif task == "translation":
             st.markdown("### 🌐 Language Translation")
@@ -527,7 +531,6 @@ def main():
                 height=100,
                 help="Provide a reference translation for evaluation"
             )
-            messages = None
             
         else:  # chat
             st.markdown("### 💬 AI Chat")
@@ -547,8 +550,6 @@ def main():
                 # Prepare for API call
                 text_input = prompt
                 messages = st.session_state.messages
-                reference = None
-                target_lang = None
     
     with col2:
         # Sidebar controls
@@ -618,8 +619,9 @@ def main():
     # Determine if we should process
     should_process = False
     
-    if task == "chat" and messages and messages[-1]["role"] == "user":
+    if task == "chat" and st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
         should_process = True
+        messages = st.session_state.messages
     elif task in ["summarization", "translation"] and st.button("🚀 Process", type="primary"):
         should_process = True
     
@@ -636,7 +638,7 @@ def main():
                 "text": text_input if task != "chat" else "",
                 "reference": reference if reference else "",
                 "target_lang": target_lang if target_lang else "",
-                "messages": messages if messages else [],
+                "messages": messages if task == "chat" else [],
                 "params": {
                     "temperature": temperature,
                     "top_p": top_p,
@@ -657,6 +659,7 @@ def main():
                     st.session_state.messages.append({"role": "assistant", "content": results})
                     with st.chat_message("assistant"):
                         st.write(results)
+                    st.rerun()
                 else:
                     # Display structured results
                     display_results(results, task)

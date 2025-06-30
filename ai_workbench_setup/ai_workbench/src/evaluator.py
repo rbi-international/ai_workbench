@@ -812,3 +812,48 @@ class Evaluator:
             self.logger.debug(f"Error storing evaluation: {e}")
 
     def compare_evaluations(self, evaluation1: pd.DataFrame, evaluation2: pd.DataFrame) -> Dict[str, Any]:
+        """
+        Compare two evaluation results
+        
+        Args:
+            evaluation1: First evaluation DataFrame
+            evaluation2: Second evaluation DataFrame
+            
+        Returns:
+            Comparison results
+        """
+        try:
+            if evaluation1.empty or evaluation2.empty:
+                return {"error": "One or both evaluations are empty"}
+            
+            # Find common metrics
+            metrics1 = set(evaluation1.columns) - {"model", "inference_time"}
+            metrics2 = set(evaluation2.columns) - {"model", "inference_time"}
+            common_metrics = metrics1.intersection(metrics2)
+            
+            if not common_metrics:
+                return {"error": "No common metrics found between evaluations"}
+            
+            comparison = {
+                "common_metrics": list(common_metrics),
+                "evaluation1_models": evaluation1["model"].tolist(),
+                "evaluation2_models": evaluation2["model"].tolist(),
+                "metric_comparison": {}
+            }
+            
+            # Compare each metric
+            for metric in common_metrics:
+                metric_comp = {
+                    "eval1_mean": evaluation1[metric].mean(),
+                    "eval2_mean": evaluation2[metric].mean(),
+                    "eval1_std": evaluation1[metric].std(),
+                    "eval2_std": evaluation2[metric].std(),
+                    "difference": evaluation2[metric].mean() - evaluation1[metric].mean()
+                }
+                comparison["metric_comparison"][metric] = metric_comp
+            
+            return comparison
+            
+        except Exception as e:
+            self.logger.error(f"Error comparing evaluations: {e}")
+            return {"error": str(e)}

@@ -1,0 +1,9 @@
+{
+  "response": "Machine learning is a subset of artificial intelligence (AI) that involves the development of algorithms and statistical models that enable computers to perform tasks without being explicitly programmed to do so. Instead, these systems learn from data, identifying patterns and making decisions with minimal human intervention. \n\nThe main types of machine learning are:\n\n1. **Supervised Learning**: In this approach, the model is trained on labeled data, meaning that each training example is paired with an output label. The goal is for the model to",
+  "inference_time": 3.00299072265625,
+  "usage": {
+    "prompt_tokens": 37,
+    "completion_tokens": 100,
+    "total_tokens": 137
+  }
+}

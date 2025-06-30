@@ -30,3 +30,10 @@ bert_score
 httpx==0.27.0
 langchain-huggingface==0.1.0
 langchain-chroma==0.1.4
+pyaudio==0.2.11
+pydub==0.25.1
+psutil==5.9.8
+bitsandbytes==0.41.0
+accelerate==0.21.0
+datasets==2.14.0
+wandb==0.16.0

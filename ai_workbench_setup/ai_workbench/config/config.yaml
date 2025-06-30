@@ -7,7 +7,7 @@ models:
     temperature: 0.7
     top_p: 0.9
     max_output_words: 100
-    enabled: false  # Disable by default to avoid GPU issues
+    enabled: false
   openai:
     name: gpt-4o
     type: openai
@@ -20,13 +20,13 @@ models:
 
 api:
   host: 127.0.0.1
-  port: 8080
+  port: 8000
   timeout: 600
   max_retries: 3
 
 websocket:
   host: 127.0.0.1
-  port: 8080
+  port: 8000
 
 logging:
   level: INFO
@@ -45,7 +45,7 @@ fine_tuning:
   learning_rate: 2e-5
   epochs: 3
   batch_size: 4
-  enabled: false  # Disable by default
+  enabled: false
 
 crowdsourcing:
   db_path: data/crowdsourced/datasets.db

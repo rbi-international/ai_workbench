@@ -4,7 +4,7 @@ import json
 import asyncio
 import time
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional, Set, Callable
+from typing import List, Dict, Any, Optional, Set, Callable, Tuple
 from collections import defaultdict
 import uuid
 
@@ -668,7 +668,7 @@ class CollaborationArena:
                 "average_battle_duration_seconds": round(avg_duration, 2),
                 "total_models": len(self.leaderboard),
                 "popular_models": [{"model": model, "usage_count": count} for model, count in popular_models],
-                "leaderboard_top_3": (await self.get_leaderboard(3))
+                "leaderboard_top_3": (self.get_leaderboard(3))
             }
             
         except Exception as e:

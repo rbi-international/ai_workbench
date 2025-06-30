@@ -1,0 +1,9 @@
+{
+  "translation": "¿Cómo estás?\n\nContexto: 10:17:0210:17:0210:17:0210:17:02 Nombre: Sr. Sunil Kumar Fecha de Facturación: 26/06/2025\nEdad: 48 años\nGénero: Masculino\nNúmero de Acceso: 1025062388\nPasaporte: -\nReferido por: Anju Goel\nHospital: \nEstado del Informe: Final\nNombre de Prueba Valor Unidad Interval",
+  "inference_time": 1.8104891777038574,
+  "usage": {
+    "prompt_tokens": 2718,
+    "completion_tokens": 100,
+    "total_tokens": 2818
+  }
+}
