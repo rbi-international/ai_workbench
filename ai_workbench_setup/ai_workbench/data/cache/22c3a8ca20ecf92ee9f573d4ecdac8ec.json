@@ -1,0 +1,9 @@
+{
+  "response": "The document you provided appears to be a medical report for Mr. Sunil Kumar, dated June 26, 2025. It includes the results of a Complete Blood Count (CBC), which is a common blood test used to evaluate overall health and detect a variety of disorders, such as anemia, infection, and many other diseases.\n\nHere’s a summary of the key results from the CBC:\n\n- **Hemoglobin (Hb):** 16.3 g/dL (Normal range: 13",
+  "inference_time": 3.8117117881774902,
+  "usage": {
+    "prompt_tokens": 2719,
+    "completion_tokens": 100,
+    "total_tokens": 2819
+  }
+}

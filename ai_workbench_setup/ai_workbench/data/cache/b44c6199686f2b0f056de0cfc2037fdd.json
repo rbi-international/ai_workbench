@@ -1,0 +1,9 @@
+{
+  "summary": "Artificial intelligence is revolutionizing industries by using advanced algorithms and automation to enhance efficiency and innovation.",
+  "inference_time": 1.1044416427612305,
+  "usage": {
+    "prompt_tokens": 51,
+    "completion_tokens": 18,
+    "total_tokens": 69
+  }
+}

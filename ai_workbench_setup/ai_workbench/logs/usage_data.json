@@ -1,24 +1,24 @@
 {
-  "total_cost": 0.050495,
+  "total_cost": 0.0812,
   "models": {
     "gpt-4o": {
-      "total_prompt_tokens": 8494,
-      "total_completion_tokens": 535,
-      "total_output_words": 371,
-      "total_requests": 7,
-      "total_cost": 0.050495
+      "total_prompt_tokens": 13981,
+      "total_completion_tokens": 753,
+      "total_output_words": 523,
+      "total_requests": 10,
+      "total_cost": 0.0812
     }
   },
   "daily_usage": {
     "2025-06-30": {
       "gpt-4o": {
-        "prompt_tokens": 8494,
-        "completion_tokens": 535,
-        "output_words": 371,
-        "requests": 7,
-        "cost": 0.050495
+        "prompt_tokens": 13981,
+        "completion_tokens": 753,
+        "output_words": 523,
+        "requests": 10,
+        "cost": 0.0812
       }
     }
   },
-  "last_updated": "2025-06-30T10:19:40.216358"
+  "last_updated": "2025-06-30T11:50:57.146067"
 }

@@ -360,6 +360,11 @@ class CrowdsourceInput(BaseModel):
     data: List[Dict]
     submitter: str = "anonymous"
 
+class VoiceMessage(BaseModel):
+    text: str
+    messages: Optional[List[Dict]] = None
+    params: Dict[str, Any] = {}
+
 # Health check endpoint
 @app.get("/health")
 async def health_check():
@@ -389,7 +394,7 @@ async def health_check():
 # Main processing endpoint
 @app.post("/process")
 async def process_task(input: TaskInput):
-    """Main task processing endpoint"""
+    """Main task processing endpoint - FIXED: Only use RAG for chat + Proper evaluation for graphs"""
     try:
         log_info(f"Processing request: task={input.task}")
         
@@ -404,9 +409,9 @@ async def process_task(input: TaskInput):
             log_warning(f"Parameter validation failed: {e}")
             params = input.params
         
-        # Retrieve context if available (FIXED RAG INTEGRATION)
+        # FIXED: Only retrieve context for chat tasks
         context = []
-        if retriever:
+        if input.task == "chat" and retriever:
             # Determine query text for context retrieval
             query_text = ""
             if input.text:
@@ -421,7 +426,7 @@ async def process_task(input: TaskInput):
             if query_text:
                 try:
                     context = retriever.retrieve(query_text)
-                    log_info(f"Retrieved {len(context)} context documents for query: {query_text[:50]}...")
+                    log_info(f"Retrieved {len(context)} context documents for chat query: {query_text[:50]}...")
                 except Exception as e:
                     log_warning(f"Context retrieval failed: {e}")
         
@@ -433,28 +438,28 @@ async def process_task(input: TaskInput):
             if not input.text:
                 raise HTTPException(status_code=400, detail="Text is required for summarization")
             
-            # Add context to text
-            text_with_context = input.text
-            if context:
-                context_text = "\n".join([doc.get("text", "") for doc in context])
-                text_with_context += f"\n\nContext: {context_text}"
+            # FIXED: No context for summarization - use original text only
+            results = summarizer.summarize(input.text, params)
             
-            results = summarizer.summarize(text_with_context, params)
-            
-            # Evaluate if reference provided
+            # FIXED: Ensure evaluation for graphs
             evaluation = None
             if evaluator and input.reference:
                 try:
+                    # Create evaluation DataFrame for visualization
                     evaluation = evaluator.evaluate_summarization(results, input.reference)
-                    evaluation = evaluation.to_dict(orient="records") if evaluation is not None else None
+                    if evaluation is not None:
+                        evaluation = evaluation.to_dict(orient="records")
+                    log_info("✓ Summarization evaluation completed for graphs")
                 except Exception as e:
                     log_warning(f"Evaluation failed: {e}")
             
+            # FIXED: Return proper format for graphs
             return {
                 "results": results,
                 "evaluation": evaluation,
-                "context_used": len(context) > 0,
-                "task": input.task
+                "context_used": False,  # Never use context for summarization
+                "task": input.task,
+                "has_evaluation": evaluation is not None
             }
         
         elif input.task == "translation":
@@ -464,29 +469,28 @@ async def process_task(input: TaskInput):
             if not input.text or not input.target_lang:
                 raise HTTPException(status_code=400, detail="Text and target language are required for translation")
             
-            # Add context to text
-            text_with_context = input.text
-            if context:
-                context_text = "\n".join([doc.get("text", "") for doc in context])
-                text_with_context += f"\n\nContext: {context_text}"
+            # FIXED: No context for translation - use original text only
+            results = translator.translate(input.text, input.target_lang, params)
             
-            results = translator.translate(text_with_context, input.target_lang, params)
-            
-            # Evaluate if reference provided
+            # FIXED: Ensure evaluation for graphs
             evaluation = None
             if evaluator and input.reference:
                 try:
                     evaluation = evaluator.evaluate_translation(results, input.reference)
-                    evaluation = evaluation.to_dict(orient="records") if evaluation is not None else None
+                    if evaluation is not None:
+                        evaluation = evaluation.to_dict(orient="records")
+                    log_info("✓ Translation evaluation completed for graphs")
                 except Exception as e:
                     log_warning(f"Evaluation failed: {e}")
             
+            # FIXED: Return proper format for graphs
             return {
                 "results": results,
                 "evaluation": evaluation,
-                "context_used": len(context) > 0,
+                "context_used": False,  # Never use context for translation
                 "target_language": input.target_lang,
-                "task": input.task
+                "task": input.task,
+                "has_evaluation": evaluation is not None
             }
         
         elif input.task == "chat":
@@ -501,7 +505,7 @@ async def process_task(input: TaskInput):
             if not messages:
                 raise HTTPException(status_code=400, detail="Messages are required for chat")
             
-            # Add context to the last user message if available (ENHANCED RAG)
+            # FIXED: Only add context to chat messages
             if context and messages:
                 last_message = messages[-1]
                 if last_message.get("role") == "user":
@@ -524,6 +528,105 @@ async def process_task(input: TaskInput):
         log_error(f"Processing error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Voice chat endpoint - NEW
+@app.post("/voice_chat")
+async def voice_chat(voice_input: VoiceMessage):
+    """Voice chat endpoint for real-time voice interaction"""
+    try:
+        if not voice_processor:
+            raise HTTPException(status_code=503, detail="Voice processing not available")
+        
+        if not chatter:
+            raise HTTPException(status_code=503, detail="Chat not available")
+        
+        log_info(f"Processing voice chat: {voice_input.text[:50]}...")
+        
+        # Prepare messages
+        messages = voice_input.messages or []
+        if voice_input.text:
+            messages.append({"role": "user", "content": voice_input.text})
+        
+        if not messages:
+            raise HTTPException(status_code=400, detail="No voice input provided")
+        
+        # Get context for voice chat (same as regular chat)
+        context = []
+        if retriever and messages:
+            query_text = messages[-1].get("content", "")
+            if query_text:
+                try:
+                    context = retriever.retrieve(query_text)
+                    log_info(f"Retrieved {len(context)} context documents for voice chat")
+                except Exception as e:
+                    log_warning(f"Voice chat context retrieval failed: {e}")
+        
+        # Add context if available
+        if context and messages:
+            last_message = messages[-1]
+            if last_message.get("role") == "user":
+                context_text = "\n".join([doc.get("text", "") for doc in context])
+                last_message["content"] += f"\n\nRelevant information:\n{context_text}"
+        
+        # Get chat response
+        results = chatter.chat(messages, voice_input.params)
+        
+        if results and results[0].get("output"):
+            response_text = results[0]["output"]
+            
+            # Generate speech
+            try:
+                audio_path = voice_processor.text_to_speech(response_text)
+                log_info("✓ Voice response generated successfully")
+                return {
+                    "text": response_text,
+                    "audio_path": audio_path,
+                    "context_used": len(context) > 0
+                }
+            except Exception as e:
+                log_warning(f"Text-to-speech failed: {e}")
+                # Return text response even if TTS fails
+                return {
+                    "text": response_text,
+                    "audio_path": None,
+                    "context_used": len(context) > 0,
+                    "tts_error": str(e)
+                }
+        else:
+            raise HTTPException(status_code=500, detail="No successful chat response generated")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_error(f"Voice chat error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Speech-to-text endpoint - NEW
+@app.post("/speech_to_text")
+async def speech_to_text(file: UploadFile = File(...)):
+    """Convert speech to text"""
+    try:
+        if not voice_processor:
+            raise HTTPException(status_code=503, detail="Voice processing not available")
+        
+        log_info(f"Processing speech-to-text for file: {file.filename}")
+        
+        # Read audio data
+        audio_data = await file.read()
+        
+        if len(audio_data) == 0:
+            raise HTTPException(status_code=400, detail="Empty audio file")
+        
+        # Convert to text
+        text = voice_processor.speech_to_text(audio_data)
+        
+        log_info(f"Speech-to-text result: {text[:50]}..." if text else "No speech detected")
+        
+        return {"text": text}
+        
+    except Exception as e:
+        log_error(f"Speech-to-text error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Document upload endpoint
 @app.post("/upload_documents")
 async def upload_documents(file: UploadFile = File(...)):
@@ -534,6 +637,8 @@ async def upload_documents(file: UploadFile = File(...)):
         
         if not PDF_PROCESSING_AVAILABLE:
             raise HTTPException(status_code=503, detail="Document processing libraries not available")
+        
+        log_info(f"Processing document upload: {file.filename}")
         
         # Process based on file type
         content = await file.read()
@@ -574,38 +679,6 @@ async def upload_documents(file: UploadFile = File(...)):
         raise
     except Exception as e:
         log_error(f"Document upload error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Voice input endpoint
-@app.post("/voice_input")
-async def voice_input(file: UploadFile = File(...)):
-    """Process voice input"""
-    try:
-        if not voice_processor:
-            raise HTTPException(status_code=503, detail="Voice processing not available")
-        
-        audio_data = await file.read()
-        text = voice_processor.speech_to_text(audio_data)
-        
-        return {"text": text}
-        
-    except Exception as e:
-        log_error(f"Voice input error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Voice output endpoint
-@app.post("/voice_output")
-async def voice_output(text: str):
-    """Generate voice output"""
-    try:
-        if not voice_processor:
-            raise HTTPException(status_code=503, detail="Voice processing not available")
-        
-        output_path = voice_processor.text_to_speech(text)
-        return {"audio_path": output_path}
-        
-    except Exception as e:
-        log_error(f"Voice output error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Crowdsourcing endpoints
