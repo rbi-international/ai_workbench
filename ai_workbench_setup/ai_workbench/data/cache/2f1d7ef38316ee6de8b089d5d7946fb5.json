@@ -1,9 +1,0 @@
-{
-  "summary": "The text provides a complete blood count (CBC) report for Mr. Sunil Kumar, a 48-year-old male, dated June 26, 2025. The report includes various hematology parameters such as hemoglobin, hematocrit, RBC count, and differential leucocyte counts. Most values fall within the biological reference intervals, with some exceptions like RBC count and Mean Corpuscular Volume (MCV), which are slightly outside the typical range. The report was prepared by Dr. Ruchi",
-  "inference_time": 3.2062301635742188,
-  "usage": {
-    "prompt_tokens": 2729,
-    "completion_tokens": 100,
-    "total_tokens": 2829
-  }
-}

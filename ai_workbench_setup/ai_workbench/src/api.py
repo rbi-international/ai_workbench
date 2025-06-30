@@ -8,6 +8,7 @@ import yaml
 import json
 import time
 import threading
+from utils.helpers import clean_response_text
 import tempfile
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -565,7 +566,7 @@ async def process_task(input: TaskInput):
             
             # For chat, return just the response from the first available model
             if results and results[0].get("output"):
-                return results[0]["output"]
+                return clean_response_text(results[0]["output"])
             else:
                 raise HTTPException(status_code=500, detail="No successful chat response generated")
         
@@ -640,7 +641,7 @@ async def voice_chat(voice_input: VoiceMessage):
                 # Continue without audio - don't fail the whole request
             
             return {
-                "text": response_text,
+                "text": clean_response_text(response_text),
                 "audio_path": audio_path,
                 "audio_url": audio_url,
                 "audio_available": audio_path is not None,

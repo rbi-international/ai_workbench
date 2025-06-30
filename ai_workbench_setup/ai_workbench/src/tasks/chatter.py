@@ -112,7 +112,7 @@ class Chatter:
             
             result = {
                 "model": model_name,
-                "output": response.strip(),
+                "output": clean_response_text(response.strip()),
                 "inference_time": inference_time,
                 "success": True,
                 "word_count": len(response.split()),

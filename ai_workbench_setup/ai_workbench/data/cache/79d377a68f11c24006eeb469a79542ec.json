@@ -1,9 +1,0 @@
-{
-  "response": "I'm unable to access or view uploaded documents. However, if you can provide a description or key details about the document, I'd be glad to assist you with any questions or information you might need related to it.",
-  "inference_time": 0.7843620777130127,
-  "usage": {
-    "prompt_tokens": 96,
-    "completion_tokens": 42,
-    "total_tokens": 138
-  }
-}

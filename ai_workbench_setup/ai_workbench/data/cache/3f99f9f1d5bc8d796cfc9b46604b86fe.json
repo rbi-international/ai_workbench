@@ -1,9 +1,0 @@
-{
-  "response": "The provided text appears to be a laboratory report for a Complete Blood Count (CBC) test for an individual named Mr. Sunil Kumar. The report includes various hematology parameters, their measured values, reference intervals, and methods used. Here are some key points from the report:\n\n- **Patient Information:**\n  - Name: Mr. Sunil Kumar\n  - Age: 48 years\n  - Gender: Male\n  - Accession Number: 1025062388\n  -",
-  "inference_time": 3.3117563724517822,
-  "usage": {
-    "prompt_tokens": 2717,
-    "completion_tokens": 100,
-    "total_tokens": 2817
-  }
-}

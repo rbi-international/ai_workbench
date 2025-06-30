@@ -9,7 +9,7 @@ from typing import Tuple, Dict, Any, List, Optional
 from dotenv import load_dotenv
 from utils.logger import setup_logger
 from utils.cost_tracker import CostTracker
-from utils.helpers import validate_text, ensure_directory, generate_cache_key, truncate_text
+from utils.helpers import validate_text, ensure_directory, generate_cache_key, truncate_text, clean_response_text
 
 load_dotenv()
 
@@ -161,7 +161,7 @@ class LlamaModel(BaseModel):
             )
             
             # Clean up response
-            response = response.strip()
+            response = clean_response_text(response.strip())
             
             return response, inference_time
             

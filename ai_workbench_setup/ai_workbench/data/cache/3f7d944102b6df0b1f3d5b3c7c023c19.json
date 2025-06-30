@@ -1,0 +1,9 @@
+{
+  "response": "The document appears to be a medical report for a patient named Mr. Sunil Kumar, aged 48 years. It is a hematology report, specifically a Complete Blood Count (CBC) test, conducted on a blood sample collected on June 26, 2025. The report was released on the same day.\n\nHere are some key details from the report:\n\n- **Patient Information:**\n  - Name: Mr. Sunil Kumar\n  - Age: 48 years\n  - Gender: Male\n  - Accession No: 1025062388\n  - Referred By: Anju Goel\n\n- **Report Information:**\n  - Billing Date: June 26, 2025\n  - Report Status:",
+  "inference_time": 3.70391845703125,
+  "usage": {
+    "prompt_tokens": 2719,
+    "completion_tokens": 150,
+    "total_tokens": 2869
+  }
+}

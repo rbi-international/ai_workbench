@@ -1,0 +1,9 @@
+{
+  "summary": "Artificial intelligence (AI) refers to the ability of computational systems to execute tasks usually linked to human intelligence, including learning, reasoning, problem-solving, perception, and decision-making. As a computer science research field, AI focuses on creating methods and software that allow machines to understand their environment and use intelligence to take actions that enhance their likelihood of reaching specific objectives.",
+  "inference_time": 1.872253656387329,
+  "usage": {
+    "prompt_tokens": 117,
+    "completion_tokens": 71,
+    "total_tokens": 188
+  }
+}

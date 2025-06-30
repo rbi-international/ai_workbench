@@ -4,6 +4,7 @@ import hashlib
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 import yaml
+import re
 
 def validate_text(text: str) -> str:
     """
@@ -26,6 +27,33 @@ def validate_text(text: str) -> str:
         raise ValueError("Input text cannot be empty or only whitespace")
     
     return cleaned_text
+
+def clean_response_text(text: str) -> str:
+    """
+    Clean response text by removing ALL types of newlines and formatting
+    """
+    if not text:
+        return text
+    
+    # Remove ALL variations of newlines
+    cleaned = text.replace('\\n', ' ')  # Escaped backslash + n
+    cleaned = cleaned.replace('\n', ' ')  # Escaped newline
+    cleaned = cleaned.replace('', ' ')   # Actual newline
+    cleaned = cleaned.replace('', ' ')   # Carriage return
+    cleaned = cleaned.replace('	', ' ')   # Tabs
+    
+    # Remove markdown formatting that creates visual breaks
+    cleaned = cleaned.replace('**', '')    # Bold markdown
+    cleaned = cleaned.replace('- **', '- ') # List items with bold
+    
+    # Clean up multiple spaces
+    cleaned = re.sub(r'\s+', ' ', cleaned)
+    
+    # Clean up bullet points and dashes
+    cleaned = re.sub(r'\s*-\s*-\s*', ' - ', cleaned)  # Multiple dashes
+    cleaned = re.sub(r'\s*\*\s*', ' ', cleaned)       # Asterisks used as bullets
+    
+    return cleaned.strip()
 
 def ensure_directory(path: Union[str, Path]) -> Path:
     """

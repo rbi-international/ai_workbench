@@ -1,6 +1,6 @@
 from src.models.base_model import BaseModel
 from utils.logger import setup_logger
-from utils.helpers import validate_text, validate_model_params
+from utils.helpers import validate_text, validate_model_params, clean_response_text
 from typing import List, Dict, Any, Optional
 import time
 
@@ -120,7 +120,7 @@ class Translator:
             
             result = {
                 "model": model_name,
-                "output": translation.strip(),
+                "output": clean_response_text(translation.strip()),
                 "inference_time": inference_time,
                 "success": True,
                 "target_language": target_lang,

@@ -1,9 +1,0 @@
-{
-  "response": "The document you uploaded appears to be a medical report for a Complete Blood Count (CBC) test conducted on Mr. Sunil Kumar. Here is a summary of the key details from the report:\n\n- **Patient Information:**\n  - Name: Mr. Sunil Kumar\n  - Age: 48 years\n  - Gender: Male\n  - Accession No: 1025062388\n  - Referred By: Anju Goel\n\n- **Test Information:**\n  -",
-  "inference_time": 1.4326050281524658,
-  "usage": {
-    "prompt_tokens": 2724,
-    "completion_tokens": 100,
-    "total_tokens": 2824
-  }
-}

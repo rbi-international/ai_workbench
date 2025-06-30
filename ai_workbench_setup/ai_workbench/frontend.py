@@ -58,59 +58,6 @@ st.markdown("""
     box-shadow: 0 8px 32px rgba(0,0,0,0.1);
 }
 
-.voice-btn {
-    background: linear-gradient(145deg, #007bff, #0056b3);
-    border: none;
-    border-radius: 50%;
-    width: 80px;
-    height: 80px;
-    color: white;
-    font-size: 32px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 8px 20px rgba(0,123,255,0.3);
-}
-
-.voice-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 25px rgba(0,123,255,0.4);
-}
-
-.voice-btn.recording {
-    background: linear-gradient(145deg, #dc3545, #c82333);
-    animation: pulse-glow 1.5s infinite;
-}
-
-@keyframes pulse-glow {
-    0% { transform: scale(1); box-shadow: 0 0 20px rgba(220,53,69,0.6); }
-    50% { transform: scale(1.05); box-shadow: 0 0 40px rgba(220,53,69,0.8); }
-    100% { transform: scale(1); box-shadow: 0 0 20px rgba(220,53,69,0.6); }
-}
-
-.voice-status {
-    margin: 20px 0;
-    padding: 15px;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 16px;
-}
-
-.status-ready { 
-    background: rgba(40, 167, 69, 0.2); 
-    color: #28a745; 
-    border: 2px solid rgba(40, 167, 69, 0.3);
-}
-.status-recording { 
-    background: rgba(220, 53, 69, 0.2); 
-    color: #dc3545; 
-    border: 2px solid rgba(220, 53, 69, 0.3);
-}
-.status-processing { 
-    background: rgba(255, 193, 7, 0.2); 
-    color: #ffc107; 
-    border: 2px solid rgba(255, 193, 7, 0.3);
-}
-
 .success-message { color: #28a745; font-weight: bold; }
 .error-message { color: #dc3545; font-weight: bold; }
 .warning-message { color: #ffc107; font-weight: bold; }
@@ -137,6 +84,10 @@ def initialize_session_state():
         st.session_state.selected_models = []
     if "evaluation_results" not in st.session_state:
         st.session_state.evaluation_results = None
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+    if "uploaded_documents" not in st.session_state:
+        st.session_state.uploaded_documents = []
 
 # Load configuration
 @st.cache_data
@@ -195,9 +146,9 @@ def create_session():
     
     return session
 
-# Enhanced Voice Interface
+# Voice Interface Component
 def render_voice_interface(api_urls):
-    """Render voice interface with recording capabilities"""
+    """Render enhanced voice interface"""
     
     voice_html = f"""
     <div class="voice-container">
@@ -207,23 +158,50 @@ def render_voice_interface(api_urls):
         </p>
         
         <div style="display: flex; justify-content: center; margin: 20px 0;">
-            <button id="voiceBtn" class="voice-btn" onclick="toggleRecording()">
-                🎤
-            </button>
+            <button id="voiceBtn" onclick="toggleRecording()" style="
+                background: rgba(255,255,255,0.2);
+                border: 3px solid rgba(255,255,255,0.3);
+                border-radius: 50%;
+                width: 80px;
+                height: 80px;
+                color: white;
+                font-size: 32px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            ">🎤</button>
         </div>
         
-        <div id="voiceStatus" class="voice-status status-ready">
+        <div id="voiceStatus" style="
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 12px;
+            background: rgba(40, 167, 69, 0.2);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+        ">
             Ready to listen - Click the microphone to start
         </div>
         
-        <div id="transcription" style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.9); border-radius: 10px; min-height: 50px; color: #333;">
+        <div id="transcription" style="
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 10px;
+            min-height: 50px;
+            color: #333;
+        ">
             Your speech will appear here...
         </div>
         
         <div style="margin-top: 15px;">
-            <button onclick="clearTranscription()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 8px 15px; color: white; cursor: pointer;">
-                🗑️ Clear
-            </button>
+            <button onclick="clearTranscription()" style="
+                background: rgba(255,255,255,0.2);
+                border: 1px solid rgba(255,255,255,0.3);
+                border-radius: 8px;
+                padding: 8px 15px;
+                color: white;
+                cursor: pointer;
+            ">🗑️ Clear</button>
         </div>
     </div>
     
@@ -254,13 +232,13 @@ def render_voice_interface(api_urls):
                 mediaRecorder.start();
                 isRecording = true;
                 
-                btn.classList.add('recording');
+                btn.style.background = 'rgba(220, 53, 69, 0.8)';
                 btn.innerHTML = '🛑';
-                status.className = 'voice-status status-recording';
+                status.style.background = 'rgba(220, 53, 69, 0.2)';
                 status.textContent = 'Recording... Click to stop';
                 
             }} catch (error) {{
-                status.className = 'voice-status status-ready';
+                status.style.background = 'rgba(40, 167, 69, 0.2)';
                 status.textContent = 'Microphone access denied. Please enable permissions.';
                 console.error('Error accessing microphone:', error);
             }}
@@ -268,9 +246,9 @@ def render_voice_interface(api_urls):
             mediaRecorder.stop();
             isRecording = false;
             
-            btn.classList.remove('recording');
-            btn.innerHTML = '⏳';
-            status.className = 'voice-status status-processing';
+            btn.style.background = 'rgba(255,255,255,0.2)';
+            btn.innerHTML = '🎤';
+            status.style.background = 'rgba(255, 193, 7, 0.2)';
             status.textContent = 'Processing speech...';
             
             mediaRecorder.stream.getTracks().forEach(track => track.stop());
@@ -280,7 +258,6 @@ def render_voice_interface(api_urls):
     async function processAudio(audioBlob) {{
         const status = document.getElementById('voiceStatus');
         const transcription = document.getElementById('transcription');
-        const btn = document.getElementById('voiceBtn');
         
         try {{
             const formData = new FormData();
@@ -304,8 +281,13 @@ def render_voice_interface(api_urls):
                         text: text
                     }}, '*');
                     
+                    status.style.background = 'rgba(40, 167, 69, 0.2)';
+                    status.textContent = 'Speech recognized! Processing response...';
+                    
                 }} else {{
                     transcription.innerHTML = '<em>No speech detected. Please try again.</em>';
+                    status.style.background = 'rgba(40, 167, 69, 0.2)';
+                    status.textContent = 'Ready for voice input';
                 }}
             }} else {{
                 throw new Error(`HTTP ${{response.status}}`);
@@ -314,10 +296,7 @@ def render_voice_interface(api_urls):
         }} catch (error) {{
             console.error('Error processing audio:', error);
             transcription.innerHTML = '<em>Error processing speech. Please try again.</em>';
-        }} finally {{
-            btn.classList.remove('recording');
-            btn.innerHTML = '🎤';
-            status.className = 'voice-status status-ready';
+            status.style.background = 'rgba(40, 167, 69, 0.2)';
             status.textContent = 'Ready for voice input';
         }}
     }}
@@ -329,9 +308,9 @@ def render_voice_interface(api_urls):
     </script>
     """
     
-    components.html(voice_html, height=300)
+    components.html(voice_html, height=350)
 
-# Check API health
+# Health check
 def check_api_health(api_urls):
     """Check API health status"""
     try:
@@ -348,13 +327,13 @@ def check_api_health(api_urls):
     except Exception as e:
         return False, f"Health check error: {e}"
 
-# Main processing function with comprehensive metrics
+# Main processing function
 def process_task_with_metrics(api_urls, payload):
     """Process task with comprehensive metrics collection"""
     try:
         session = create_session()
         
-        with st.spinner("Processing with comprehensive metrics..."):
+        with st.spinner("Processing with AI models..."):
             response = session.post(
                 api_urls["process"], 
                 json=payload, 
@@ -364,12 +343,6 @@ def process_task_with_metrics(api_urls, payload):
         if response.status_code == 200:
             try:
                 result = response.json()
-                
-                # If we have evaluation data, enhance it with additional metrics
-                if "evaluation" in result and result["evaluation"]:
-                    enhanced_evaluation = enhance_evaluation_metrics(result["evaluation"])
-                    result["evaluation"] = enhanced_evaluation
-                
                 return True, result
             except json.JSONDecodeError:
                 return True, response.text
@@ -389,30 +362,7 @@ def process_task_with_metrics(api_urls, payload):
     except Exception as e:
         return False, f"Processing error: {str(e)}"
 
-def enhance_evaluation_metrics(evaluation_data):
-    """Enhance evaluation data with additional computed metrics"""
-    try:
-        df = pd.DataFrame(evaluation_data)
-        
-        # Add custom metrics calculations
-        for idx, row in df.iterrows():
-            if "word_count" in row and "inference_time" in row and row["inference_time"] > 0:
-                df.at[idx, "words_per_second"] = row["word_count"] / row["inference_time"]
-            
-            # Add efficiency score (quality/time tradeoff)
-            quality_metrics = ["rouge1", "rouge2", "rougeL", "bertscore_f1", "bleu"]
-            quality_scores = [row.get(metric, 0) for metric in quality_metrics if metric in row]
-            
-            if quality_scores and row.get("inference_time", 0) > 0:
-                avg_quality = sum(quality_scores) / len(quality_scores)
-                df.at[idx, "efficiency_score"] = avg_quality / row["inference_time"]
-        
-        return df.to_dict('records')
-    except Exception as e:
-        st.warning(f"Could not enhance metrics: {e}")
-        return evaluation_data
-
-# Display comprehensive results
+# Display results function
 def display_comprehensive_results(results, task_type):
     """Display results with comprehensive metrics and visualizations"""
     if isinstance(results, str):
@@ -430,7 +380,7 @@ def display_comprehensive_results(results, task_type):
     if task_results:
         st.markdown("### 🤖 Model Results")
         
-        tabs = st.tabs([f"📊 Results", f"📈 Metrics", f"🎯 Analysis"])
+        tabs = st.tabs(["📊 Results", "📈 Metrics", "🎯 Analysis"])
         
         with tabs[0]:
             for i, result in enumerate(task_results):
@@ -466,40 +416,69 @@ def display_comprehensive_results(results, task_type):
         
         with tabs[1]:
             if evaluation and len(evaluation) > 0:
-                display_comprehensive_metrics(evaluation)
+                display_metrics_tab(evaluation)
             else:
                 st.info("No evaluation metrics available. Add a reference text for detailed metrics.")
         
         with tabs[2]:
             if evaluation and len(evaluation) > 0:
-                display_analysis_insights(evaluation, task_type)
+                display_analysis_tab(evaluation, task_type)
             else:
                 st.info("Analysis requires evaluation metrics.")
 
-def display_comprehensive_metrics(evaluation):
-    """Display comprehensive metrics with enhanced visualizations"""
+def display_metrics_tab(evaluation):
+    """Display metrics in organized tabs"""
     try:
         df = pd.DataFrame(evaluation)
         
-        # Metrics overview
-        st.markdown("#### 📊 Comprehensive Metrics Overview")
-        
-        # Metric categories
+        # Create metric categories
         metric_categories = {
             "Quality": ["rouge1", "rouge2", "rougeL", "bertscore_f1", "bleu", "meteor"],
-            "Performance": ["inference_time", "tokens_per_second", "words_per_second", "efficiency_score"],
-            "Content": ["word_count", "sentence_count", "vocabulary_diversity", "compression_ratio"],
-            "Advanced": ["coherence_score", "fluency_score", "readability_score", "sentiment_score"]
+            "Performance": ["inference_time", "tokens_per_second", "words_per_second"],
+            "Content": ["word_count", "sentence_count", "vocabulary_diversity", "compression_ratio"]
         }
         
-        # Create tabs for different metric categories
         category_tabs = st.tabs(list(metric_categories.keys()) + ["📋 All Metrics"])
         
         for idx, (category, metrics) in enumerate(metric_categories.items()):
             with category_tabs[idx]:
                 available_metrics = [m for m in metrics if m in df.columns]
                 if available_metrics:
-                    display_metric_category(df, category, available_metrics)
+                    # Summary statistics
+                    cols = st.columns(len(available_metrics))
+                    for i, metric in enumerate(available_metrics):
+                        with cols[i]:
+                            values = df[metric].dropna()
+                            if len(values) > 0:
+                                st.metric(
+                                    label=metric.replace('_', ' ').title(),
+                                    value=f"{values.mean():.3f}",
+                                    delta=f"±{values.std():.3f}"
+                                )
+                    
+                    # Visualization
+                    if len(available_metrics) > 1:
+                        fig = go.Figure()
+                        for metric in available_metrics:
+                            if metric in df.columns:
+                                fig.add_trace(go.Bar(
+                                    name=metric.replace('_', ' ').title(),
+                                    x=df["model"],
+                                    y=df[metric],
+                                    text=df[metric].round(3),
+                                    textposition="auto"
+                                ))
+                        
+                        fig.update_layout(
+                            title=f"{category} Metrics Comparison",
+                            xaxis_title="Model",
+                            yaxis_title="Score",
+                            template="plotly_white",
+                            height=400,
+                            barmode='group'
+                        )
+                        
+                        st.plotly_chart(fig, use_container_width=True)
                 else:
                     st.info(f"No {category.lower()} metrics available")
         
@@ -529,56 +508,7 @@ def display_comprehensive_metrics(evaluation):
     except Exception as e:
         st.error(f"Error displaying metrics: {e}")
 
-def display_metric_category(df, category, metrics):
-    """Display metrics for a specific category"""
-    st.markdown(f"**{category} Metrics**")
-    
-    # Summary statistics
-    summary_cols = st.columns(len(metrics))
-    for i, metric in enumerate(metrics):
-        if metric in df.columns:
-            with summary_cols[i]:
-                values = df[metric].dropna()
-                if len(values) > 0:
-                    st.metric(
-                        label=metric.replace('_', ' ').title(),
-                        value=f"{values.mean():.3f}",
-                        delta=f"±{values.std():.3f}"
-                    )
-    
-    # Visualizations
-    if len(metrics) > 1:
-        # Bar chart comparison
-        fig = go.Figure()
-        for metric in metrics:
-            if metric in df.columns:
-                fig.add_trace(go.Bar(
-                    name=metric.replace('_', ' ').title(),
-                    x=df["model"],
-                    y=df[metric],
-                    text=df[metric].round(3),
-                    textposition="auto"
-                ))
-        
-        fig.update_layout(
-            title=f"{category} Metrics Comparison",
-            xaxis_title="Model",
-            yaxis_title="Score",
-            template="plotly_white",
-            height=400,
-            barmode='group'
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Individual metric details
-    for metric in metrics:
-        if metric in df.columns:
-            with st.expander(f"📋 {metric.replace('_', ' ').title()} Details"):
-                metric_df = df[["model", metric]].sort_values(metric, ascending=False)
-                st.dataframe(metric_df, use_container_width=True)
-
-def display_analysis_insights(evaluation, task_type):
+def display_analysis_tab(evaluation, task_type):
     """Display analysis insights and recommendations"""
     try:
         df = pd.DataFrame(evaluation)
@@ -607,11 +537,10 @@ def display_analysis_insights(evaluation, task_type):
         if len(successful_models) > 0:
             st.markdown("#### 🏆 Top Performers")
             
-            # Determine best model by different criteria
             performance_criteria = {
                 "Speed": ("inference_time", "min"),
                 "Quality": ("rouge1", "max") if "rouge1" in df.columns else ("word_count", "max"),
-                "Efficiency": ("efficiency_score", "max") if "efficiency_score" in df.columns else ("words_per_second", "max")
+                "Efficiency": ("words_per_second", "max") if "words_per_second" in df.columns else ("inference_time", "min")
             }
             
             perf_cols = st.columns(len(performance_criteria))
@@ -630,7 +559,6 @@ def display_analysis_insights(evaluation, task_type):
         
         # Recommendations
         st.markdown("#### 💡 Recommendations")
-        
         recommendations = generate_recommendations(df, task_type)
         for rec in recommendations:
             st.info(rec)
@@ -670,19 +598,6 @@ def generate_recommendations(df, task_type):
                 elif avg_quality > 0.7:
                     recommendations.append("🎯 Excellent quality performance - current approach is working well")
         
-        # Model diversity recommendations
-        if "model" in df.columns:
-            model_performance_variance = {}
-            for metric in df.select_dtypes(include=[np.number]).columns:
-                if metric != "inference_time":
-                    variance = df[metric].var()
-                    model_performance_variance[metric] = variance
-            
-            if model_performance_variance:
-                high_variance_metrics = [m for m, v in model_performance_variance.items() if v > 0.1]
-                if high_variance_metrics:
-                    recommendations.append(f"🔄 High variance in {', '.join(high_variance_metrics)} - consider model ensemble")
-        
         # Task-specific recommendations
         if task_type == "summarization":
             if "compression_ratio" in df.columns:
@@ -706,68 +621,72 @@ def generate_recommendations(df, task_type):
     
     return recommendations
 
-# Voice chat interface
-def render_voice_chat_interface(api_urls):
-    """Render voice-enabled chat interface"""
-    st.markdown("### 💬 AI Chat with Voice")
+# Enhanced Chat Interface
+def render_chat_interface(api_urls):
+    """Render enhanced chat interface with voice support"""
+    st.markdown("### 💬 AI Chat Assistant")
     
-    # Voice interface
-    if st.session_state.voice_enabled:
+    # Voice interface section
+    if st.checkbox("🎤 Enable Voice Chat", value=st.session_state.voice_enabled):
+        st.session_state.voice_enabled = True
         render_voice_interface(api_urls)
-        
-        # Handle voice input
-        if st.session_state.voice_input_text:
-            process_chat_input(st.session_state.voice_input_text, api_urls)
-            st.session_state.voice_input_text = ""
+    else:
+        st.session_state.voice_enabled = False
     
-    # Display chat history
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
+    # Chat history display
+    chat_container = st.container()
+    with chat_container:
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.write(message["content"])
     
-    # Text input
+    # Chat input
     if prompt := st.chat_input("Type your message or use voice input above..."):
         process_chat_input(prompt, api_urls)
 
 def process_chat_input(text, api_urls):
-    """Process chat input (text or voice)"""
+    """Process chat input from text or voice"""
     if not text.strip():
         return
     
     # Add user message
     st.session_state.messages.append({"role": "user", "content": text})
     
-    # Get AI response
-    with st.spinner("🤖 AI is thinking..."):
-        try:
-            session = create_session()
-            
-            payload = {
-                "task": "chat",
-                "messages": st.session_state.messages,
-                "params": {
-                    "temperature": 0.7,
-                    "max_tokens": 150,
-                    "top_p": 0.9
-                }
-            }
-            
-            response = session.post(api_urls["process"], json=payload, timeout=60)
-            
-            if response.status_code == 200:
-                ai_response = response.text.strip()
-                st.session_state.messages.append({"role": "assistant", "content": ai_response})
-                
-                # Generate voice response if enabled
-                if st.session_state.voice_enabled:
-                    generate_voice_response(ai_response, api_urls)
-            else:
-                st.error(f"API Error: {response.status_code}")
-                
-        except Exception as e:
-            st.error(f"Error: {e}")
+    # Display user message
+    with st.chat_message("user"):
+        st.write(text)
     
-    st.rerun()
+    # Get AI response
+    with st.chat_message("assistant"):
+        with st.spinner("🤖 AI is thinking..."):
+            try:
+                session = create_session()
+                
+                payload = {
+                    "task": "chat",
+                    "messages": st.session_state.messages,
+                    "params": {
+                        "temperature": 0.7,
+                        "max_tokens": 150,
+                        "top_p": 0.9
+                    }
+                }
+                
+                response = session.post(api_urls["process"], json=payload, timeout=60)
+                
+                if response.status_code == 200:
+                    ai_response = response.text.strip()
+                    st.write(ai_response)
+                    st.session_state.messages.append({"role": "assistant", "content": ai_response})
+                    
+                    # Generate voice response if enabled
+                    if st.session_state.voice_enabled:
+                        generate_voice_response(ai_response, api_urls)
+                else:
+                    st.error(f"API Error: {response.status_code}")
+                    
+            except Exception as e:
+                st.error(f"Error: {e}")
 
 def generate_voice_response(text, api_urls):
     """Generate voice response from text"""
@@ -789,9 +708,9 @@ def generate_voice_response(text, api_urls):
     except Exception as e:
         st.warning(f"Voice generation failed: {e}")
 
-# Enhanced task interfaces with comprehensive metrics
-def render_enhanced_summarization(api_urls):
-    """Enhanced summarization interface with comprehensive metrics"""
+# Summarization Interface
+def render_summarization_interface(api_urls):
+    """Enhanced summarization interface"""
     st.markdown("### 📝 Advanced Text Summarization")
     
     col1, col2 = st.columns([2, 1])
@@ -814,21 +733,8 @@ def render_enhanced_summarization(api_urls):
         temperature = st.slider("🌡️ Temperature", 0.1, 2.0, 0.7, 0.1)
         max_tokens = st.slider("📏 Max Tokens", 50, 500, 100, 10)
         min_tokens = st.slider("📐 Min Tokens", 10, 200, 30, 5)
-        
-        st.markdown("#### 📊 Metrics")
-        enable_advanced = st.checkbox("Enable Advanced Metrics", value=True)
-        
-        if enable_advanced:
-            selected_metrics = st.multiselect(
-                "Select specific metrics:",
-                ["rouge1", "rouge2", "rougeL", "bertscore_f1", "coherence_score", 
-                 "fluency_score", "compression_ratio", "vocabulary_diversity"],
-                default=["rouge1", "rouge2", "rougeL", "bertscore_f1"]
-            )
-        else:
-            selected_metrics = ["rouge1", "rouge2", "rougeL"]
     
-    if st.button("🚀 Generate Summary with Comprehensive Analysis", type="primary"):
+    if st.button("🚀 Generate Summary", type="primary"):
         if text_input.strip():
             payload = {
                 "task": "summarization",
@@ -838,9 +744,7 @@ def render_enhanced_summarization(api_urls):
                     "temperature": temperature,
                     "max_tokens": max_tokens,
                     "min_tokens": min_tokens
-                },
-                "metrics": selected_metrics,
-                "enable_comprehensive": enable_advanced
+                }
             }
             
             success, results = process_task_with_metrics(api_urls, payload)
@@ -853,8 +757,9 @@ def render_enhanced_summarization(api_urls):
         else:
             st.error("Please enter text to summarize")
 
-def render_enhanced_translation(api_urls):
-    """Enhanced translation interface with comprehensive metrics"""
+# Translation Interface
+def render_translation_interface(api_urls):
+    """Enhanced translation interface"""
     st.markdown("### 🌐 Advanced Language Translation")
     
     col1, col2 = st.columns([2, 1])
@@ -879,4 +784,283 @@ def render_enhanced_translation(api_urls):
              "Chinese", "Japanese", "Korean", "Arabic", "Hindi", "Russian"]
         )
         
-        st
+        temperature = st.slider("🌡️ Temperature", 0.1, 2.0, 0.3, 0.1)
+        max_tokens = st.slider("📏 Max Tokens", 50, 500, 200, 10)
+    
+    if st.button("🌐 Translate Text", type="primary"):
+        if text_input.strip():
+            payload = {
+                "task": "translation",
+                "text": text_input,
+                "target_lang": target_lang,
+                "reference": reference if reference.strip() else None,
+                "params": {
+                    "temperature": temperature,
+                    "max_tokens": max_tokens
+                }
+            }
+            
+            success, results = process_task_with_metrics(api_urls, payload)
+            
+            if success:
+                display_comprehensive_results(results, "translation")
+                st.session_state.evaluation_results = results.get("evaluation")
+            else:
+                st.error(f"❌ **Processing failed:** {results}")
+        else:
+            st.error("Please enter text to translate")
+
+# Document Upload Interface
+def render_document_interface(api_urls):
+    """Document upload and processing interface"""
+    st.markdown("### 📄 Document Intelligence")
+    
+    # File upload
+    uploaded_files = st.file_uploader(
+        "Upload documents (PDF, images, text files)",
+        type=["pdf", "png", "jpg", "jpeg", "txt"],
+        accept_multiple_files=True,
+        help="Upload documents to ask questions about their content"
+    )
+    
+    if uploaded_files:
+        for uploaded_file in uploaded_files:
+            if uploaded_file not in st.session_state.uploaded_documents:
+                # Process and upload the file
+                with st.spinner(f"Processing {uploaded_file.name}..."):
+                    try:
+                        files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
+                        session = create_session()
+                        response = session.post(api_urls["upload"], files=files, timeout=60)
+                        
+                        if response.status_code == 200:
+                            result = response.json()
+                            st.success(f"✅ {uploaded_file.name} uploaded successfully!")
+                            st.session_state.uploaded_documents.append(uploaded_file.name)
+                        else:
+                            st.error(f"❌ Failed to upload {uploaded_file.name}")
+                    except Exception as e:
+                        st.error(f"Error uploading {uploaded_file.name}: {e}")
+    
+    # Display uploaded documents
+    if st.session_state.uploaded_documents:
+        st.markdown("#### 📚 Uploaded Documents")
+        for doc in st.session_state.uploaded_documents:
+            st.info(f"📄 {doc}")
+    
+    # Document query interface
+    st.markdown("#### ❓ Ask Questions About Your Documents")
+    
+    question = st.text_input(
+        "Enter your question:",
+        placeholder="What is the main topic of the documents?",
+        help="Ask questions about the content of your uploaded documents"
+    )
+    
+    if st.button("🔍 Search Documents") and question:
+        with st.spinner("Searching through documents..."):
+            try:
+                # Use chat endpoint with document context
+                payload = {
+                    "task": "chat",
+                    "text": question,
+                    "params": {
+                        "temperature": 0.3,
+                        "max_tokens": 200
+                    }
+                }
+                
+                session = create_session()
+                response = session.post(api_urls["process"], json=payload, timeout=60)
+                
+                if response.status_code == 200:
+                    answer = response.text
+                    
+                    st.markdown("#### 💡 Answer")
+                    st.info(f"**Question:** {question}")
+                    st.success(f"**Answer:** {answer}")
+                else:
+                    st.error("Failed to process document query")
+                    
+            except Exception as e:
+                st.error(f"Error processing query: {e}")
+
+# Analytics Interface
+def render_analytics_interface(api_urls):
+    """Analytics and system monitoring interface"""
+    st.markdown("### 📈 System Analytics & Performance")
+    
+    # System health check
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        if st.button("🔄 Refresh System Status"):
+            with st.spinner("Checking system health..."):
+                is_healthy, health_data = check_api_health(api_urls)
+                st.session_state.api_status = health_data
+    
+    with col2:
+        if st.button("📊 Get Usage Statistics"):
+            with st.spinner("Fetching usage data..."):
+                try:
+                    session = create_session()
+                    response = session.get(api_urls["usage"], timeout=10)
+                    if response.status_code == 200:
+                        usage_data = response.json()
+                        st.session_state.usage_stats = usage_data
+                except Exception as e:
+                    st.error(f"Failed to fetch usage stats: {e}")
+    
+    # Display system status
+    if st.session_state.api_status:
+        st.markdown("#### 🚀 System Status")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            status = st.session_state.api_status.get("status", "unknown")
+            st.metric("API Status", "✅ Healthy" if status == "healthy" else "❌ Issues")
+        
+        with col2:
+            models_available = st.session_state.api_status.get("models_available", 0)
+            st.metric("Models Available", models_available)
+        
+        with col3:
+            voice_status = st.session_state.api_status.get("voice_system", {})
+            voice_available = voice_status.get("available", False)
+            st.metric("Voice System", "🎤 Ready" if voice_available else "❌ Offline")
+        
+        with col4:
+            components = st.session_state.api_status.get("components", {})
+            active_components = sum(1 for comp in components.values() if comp)
+            st.metric("Active Components", f"{active_components}/{len(components)}")
+    
+    # Usage statistics
+    if hasattr(st.session_state, 'usage_stats'):
+        st.markdown("#### 📊 Usage Statistics")
+        
+        stats = st.session_state.usage_stats.get("usage_stats", {})
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            total_requests = stats.get("total_requests", 0)
+            st.metric("Total Requests", total_requests)
+        
+        with col2:
+            avg_response_time = stats.get("avg_response_time", 0)
+            st.metric("Avg Response Time", f"{avg_response_time:.2f}s")
+        
+        with col3:
+            total_cost = stats.get("total_cost", 0.0)
+            st.metric("Total Cost", f"${total_cost:.4f}")
+
+# Main Application
+def main():
+    """Main application entry point"""
+    initialize_session_state()
+    
+    # Load configuration
+    config = load_config()
+    api_urls = get_api_urls(config)
+    
+    # Main header
+    st.markdown('<h1 class="main-header">🤖 AI Workbench</h1>', unsafe_allow_html=True)
+    st.markdown("**Your Complete AI Assistant Platform**")
+    
+    # Sidebar navigation
+    with st.sidebar:
+        st.markdown("## 🧭 Navigation")
+        
+        tab_selection = st.selectbox(
+            "Choose a feature:",
+            [
+                "📊 Overview",
+                "💬 Chat Assistant", 
+                "📝 Text Summarization",
+                "🌐 Language Translation",
+                "📄 Document Intelligence",
+                "📈 Analytics & Monitoring"
+            ]
+        )
+        
+        # System status in sidebar
+        st.markdown("---")
+        st.markdown("### 🔧 Quick Status")
+        
+        if st.button("🔄 Check Health"):
+            with st.spinner("Checking..."):
+                is_healthy, health_data = check_api_health(api_urls)
+                if is_healthy:
+                    st.success("✅ System Healthy")
+                else:
+                    st.error(f"❌ Issues: {health_data}")
+    
+    # Main content area
+    if tab_selection == "📊 Overview":
+        st.markdown("## 🌟 Welcome to AI Workbench!")
+        
+        st.markdown("""
+        Your complete AI assistant platform with multi-model support, voice capabilities, 
+        and document intelligence. Choose a feature from the sidebar to get started.
+        """)
+        
+        # Feature cards
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("""
+            ### 🤖 Multi-Model AI
+            - Compare responses from different AI models
+            - OpenAI GPT and Meta LLaMA support
+            - Real-time performance metrics
+            """)
+            
+            st.markdown("""
+            ### 📄 Document Intelligence
+            - Upload PDFs, images, and text files
+            - Ask questions about document content
+            - RAG-powered responses
+            """)
+        
+        with col2:
+            st.markdown("""
+            ### 🎤 Voice Interface
+            - Speech-to-text input
+            - Text-to-speech responses
+            - Natural conversation flow
+            """)
+            
+            st.markdown("""
+            ### 📊 Advanced Analytics
+            - Performance monitoring
+            - Usage statistics
+            - Quality metrics and insights
+            """)
+    
+    elif tab_selection == "💬 Chat Assistant":
+        render_chat_interface(api_urls)
+    
+    elif tab_selection == "📝 Text Summarization":
+        render_summarization_interface(api_urls)
+    
+    elif tab_selection == "🌐 Language Translation":
+        render_translation_interface(api_urls)
+    
+    elif tab_selection == "📄 Document Intelligence":
+        render_document_interface(api_urls)
+    
+    elif tab_selection == "📈 Analytics & Monitoring":
+        render_analytics_interface(api_urls)
+    
+    # Footer
+    st.markdown("---")
+    st.markdown(
+        "<div style='text-align: center; color: #666; padding: 20px;'>"
+        "🤖 AI Workbench - Powered by OpenAI, Meta LLaMA, and Streamlit"
+        "</div>", 
+        unsafe_allow_html=True
+    )
+
+if __name__ == "__main__":
+    main()
