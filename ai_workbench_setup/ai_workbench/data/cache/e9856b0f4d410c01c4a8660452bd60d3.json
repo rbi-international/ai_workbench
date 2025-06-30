@@ -1,0 +1,9 @@
+{
+  "response": "Based on the information provided, it looks like the name from the documents is \"Mr. Sunil Kumar.\" To create a variable called `name` with this value and print a greeting, you can use the following Python code:\n\n```python\nname = \"Mr. Sunil Kumar\"\nprint(f\"Hello, {name}!\")\n```\n\nThis code snippet assigns the string \"Mr. Sunil Kumar\" to the variable `name` and then prints a greeting using an f-string for formatting.",
+  "inference_time": 1.9910888671875,
+  "usage": {
+    "prompt_tokens": 2733,
+    "completion_tokens": 100,
+    "total_tokens": 2833
+  }
+}
