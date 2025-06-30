@@ -6,6 +6,7 @@ import yaml
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
+import numpy as np
 import json
 import time
 import os
@@ -15,16 +16,17 @@ import base64
 import tempfile
 import streamlit.components.v1 as components
 import io
+from datetime import datetime
 
 # Page configuration
 st.set_page_config(
-    page_title="AI Workbench",
+    page_title="AI Workbench - LLaMA vs OpenAI Comparison",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Enhanced CSS for voice interface
+# Enhanced CSS for voice interface and charts
 st.markdown("""
 <style>
 .main-header {
@@ -32,6 +34,9 @@ st.markdown("""
     color: #1f77b4;
     text-align: center;
     margin-bottom: 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 .sub-header {
     font-size: 1.5rem;
@@ -44,6 +49,7 @@ st.markdown("""
     padding: 1rem;
     border-radius: 0.5rem;
     margin: 0.5rem 0;
+    border-left: 4px solid #007bff;
 }
 .success-message {
     color: #28a745;
@@ -56,6 +62,44 @@ st.markdown("""
 .warning-message {
     color: #ffc107;
     font-weight: bold;
+}
+
+/* Chart Styling */
+.plotly-graph-div {
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin: 10px 0;
+}
+
+.metric-summary {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 15px;
+    border-radius: 10px;
+    margin: 10px 0;
+}
+
+.ranking-item {
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-left: 4px solid #007bff;
+    margin: 5px 0;
+    border-radius: 0 5px 5px 0;
+}
+
+.comparison-winner {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 5px solid #28a745;
+    margin: 10px 0;
+}
+
+.comparison-loser {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 5px solid #dc3545;
+    margin: 10px 0;
 }
 
 /* Enhanced Voice Interface Styles */
@@ -89,8 +133,6 @@ st.markdown("""
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 8px 20px rgba(0,123,255,0.3);
-    position: relative;
-    overflow: hidden;
 }
 
 .voice-btn:hover {
@@ -186,77 +228,193 @@ st.markdown("""
     font-size: 14px;
 }
 
-.voice-tips {
-    margin-top: 20px;
-    font-size: 14px;
-    opacity: 0.9;
-    line-height: 1.4;
-}
-
-.audio-visualizer {
-    width: 100%;
-    height: 40px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 20px;
-    margin: 15px 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-
-.visualizer-bar {
-    width: 3px;
-    background: linear-gradient(to top, #007bff, #00d4ff);
-    margin: 0 1px;
-    transition: height 0.1s ease;
-    border-radius: 2px;
-}
-
-.chat-bubble {
-    background: #f8f9fa;
-    border-radius: 18px;
-    padding: 12px 18px;
-    margin: 8px 0;
-    max-width: 80%;
-    word-wrap: break-word;
-}
-
-.chat-bubble.user {
-    background: #007bff;
+.model-comparison-header {
+    background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
     color: white;
-    margin-left: auto;
-}
-
-.chat-bubble.assistant {
-    background: #e9ecef;
-    color: #333;
-}
-
-.voice-response-controls {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    margin-top: 15px;
-}
-
-.mini-btn {
-    background: rgba(255,255,255,0.2);
-    border: 1px solid rgba(255,255,255,0.3);
-    border-radius: 8px;
-    padding: 8px 15px;
-    color: white;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.mini-btn:hover {
-    background: rgba(255,255,255,0.3);
-    border-color: rgba(255,255,255,0.5);
+    padding: 20px;
+    border-radius: 15px;
+    text-align: center;
+    margin: 20px 0;
+    box-shadow: 0 8px 25px rgba(108, 92, 231, 0.3);
 }
 </style>
 """, unsafe_allow_html=True)
+
+# Comprehensive metrics definitions for LLaMA vs OpenAI comparison
+METRICS_DEFINITIONS = {
+    # Text Quality Metrics
+    "rouge1": {
+        "name": "ROUGE-1",
+        "description": "Unigram overlap between generated and reference text",
+        "range": "0-1 (higher is better)",
+        "good_threshold": 0.4,
+        "category": "Text Quality"
+    },
+    "rouge2": {
+        "name": "ROUGE-2", 
+        "description": "Bigram overlap between generated and reference text",
+        "range": "0-1 (higher is better)",
+        "good_threshold": 0.25,
+        "category": "Text Quality"
+    },
+    "rougeL": {
+        "name": "ROUGE-L",
+        "description": "Longest common subsequence between texts",
+        "range": "0-1 (higher is better)", 
+        "good_threshold": 0.35,
+        "category": "Text Quality"
+    },
+    "bertscore_f1": {
+        "name": "BERTScore F1",
+        "description": "Semantic similarity using BERT embeddings",
+        "range": "0-1 (higher is better)",
+        "good_threshold": 0.7,
+        "category": "Text Quality"
+    },
+    "bleu": {
+        "name": "BLEU",
+        "description": "N-gram precision for translation quality",
+        "range": "0-1 (higher is better)",
+        "good_threshold": 0.3,
+        "category": "Translation Quality"
+    },
+    "meteor": {
+        "name": "METEOR",
+        "description": "Translation evaluation with word order and synonyms",
+        "range": "0-1 (higher is better)",
+        "good_threshold": 0.4,
+        "category": "Translation Quality"
+    },
+    
+    # Performance Metrics
+    "inference_time": {
+        "name": "Inference Time",
+        "description": "Time taken to generate response",
+        "range": "0+ seconds (lower is better)",
+        "good_threshold": 3.0,
+        "category": "Performance"
+    },
+    "tokens_per_second": {
+        "name": "Tokens/Second",
+        "description": "Generation speed in tokens per second",
+        "range": "0+ (higher is better)",
+        "good_threshold": 50,
+        "category": "Performance"
+    },
+    "memory_usage": {
+        "name": "Memory Usage",
+        "description": "GPU/RAM memory consumption in GB",
+        "range": "0+ GB (lower is better)",
+        "good_threshold": 8.0,
+        "category": "Performance"
+    },
+    
+    # Content Analysis Metrics
+    "word_count": {
+        "name": "Word Count",
+        "description": "Number of words in generated text",
+        "range": "0+ words",
+        "good_threshold": 50,
+        "category": "Content Analysis"
+    },
+    "sentence_count": {
+        "name": "Sentence Count", 
+        "description": "Number of sentences in generated text",
+        "range": "0+ sentences",
+        "good_threshold": 3,
+        "category": "Content Analysis"
+    },
+    "vocabulary_diversity": {
+        "name": "Vocabulary Diversity",
+        "description": "Ratio of unique words to total words",
+        "range": "0-1 (higher is better)",
+        "good_threshold": 0.7,
+        "category": "Content Analysis"
+    },
+    "avg_sentence_length": {
+        "name": "Avg Sentence Length",
+        "description": "Average words per sentence",
+        "range": "0+ words",
+        "good_threshold": 15,
+        "category": "Content Analysis"
+    },
+    
+    # Advanced Quality Metrics
+    "perplexity": {
+        "name": "Perplexity",
+        "description": "Model uncertainty/confidence (lower is better)",
+        "range": "1+ (lower is better)",
+        "good_threshold": 50,
+        "category": "Advanced Quality"
+    },
+    "coherence_score": {
+        "name": "Coherence Score",
+        "description": "Logical flow and consistency of text",
+        "range": "0-1 (higher is better)",
+        "good_threshold": 0.7,
+        "category": "Advanced Quality"
+    },
+    "relevance_score": {
+        "name": "Relevance Score",
+        "description": "How well response addresses input",
+        "range": "0-1 (higher is better)",
+        "good_threshold": 0.8,
+        "category": "Advanced Quality"
+    },
+    "fluency_score": {
+        "name": "Fluency Score",
+        "description": "Grammar and readability quality",
+        "range": "0-1 (higher is better)",
+        "good_threshold": 0.8,
+        "category": "Advanced Quality"
+    },
+    
+    # Cost and Efficiency Metrics
+    "cost_per_token": {
+        "name": "Cost per Token",
+        "description": "Cost efficiency in USD per token",
+        "range": "0+ USD (lower is better)",
+        "good_threshold": 0.00001,
+        "category": "Cost & Efficiency"
+    },
+    "energy_consumption": {
+        "name": "Energy Consumption",
+        "description": "Estimated energy usage in Wh",
+        "range": "0+ Wh (lower is better)",
+        "good_threshold": 1.0,
+        "category": "Cost & Efficiency"
+    },
+    "throughput": {
+        "name": "Throughput",
+        "description": "Requests processed per minute",
+        "range": "0+ req/min (higher is better)",
+        "good_threshold": 60,
+        "category": "Cost & Efficiency"
+    },
+    
+    # Safety and Ethics Metrics
+    "toxicity_score": {
+        "name": "Toxicity Score",
+        "description": "Harmful content detection (lower is better)",
+        "range": "0-1 (lower is better)",
+        "good_threshold": 0.1,
+        "category": "Safety & Ethics"
+    },
+    "bias_score": {
+        "name": "Bias Score",
+        "description": "Detected bias in output (lower is better)",
+        "range": "0-1 (lower is better)",
+        "good_threshold": 0.2,
+        "category": "Safety & Ethics"
+    },
+    "safety_score": {
+        "name": "Safety Score",
+        "description": "Overall safety rating (higher is better)",
+        "range": "0-1 (higher is better)",
+        "good_threshold": 0.9,
+        "category": "Safety & Ethics"
+    }
+}
 
 # Initialize session state
 def initialize_session_state():
@@ -272,11 +430,11 @@ def initialize_session_state():
     
     # Voice-specific state
     if "voice_enabled" not in st.session_state:
-        st.session_state.voice_enabled = True
+        st.session_state.voice_enabled = False
     if "voice_input_text" not in st.session_state:
         st.session_state.voice_input_text = ""
-    if "last_voice_input" not in st.session_state:
-        st.session_state.last_voice_input = ""
+    if "pending_voice_input" not in st.session_state:
+        st.session_state.pending_voice_input = ""
     if "voice_response_enabled" not in st.session_state:
         st.session_state.voice_response_enabled = True
     if "auto_speech" not in st.session_state:
@@ -285,6 +443,12 @@ def initialize_session_state():
         st.session_state.voice_language = "en"
     if "last_audio_response" not in st.session_state:
         st.session_state.last_audio_response = None
+    
+    # Comparison state
+    if "comparison_results" not in st.session_state:
+        st.session_state.comparison_results = {}
+    if "selected_metrics" not in st.session_state:
+        st.session_state.selected_metrics = ["rouge1", "rouge2", "rougeL", "bertscore_f1", "inference_time", "word_count"]
 
 # Load configuration
 @st.cache_data
@@ -346,1261 +510,303 @@ def create_session():
     
     return session
 
-# Enhanced Voice Interface Component
-def render_advanced_voice_interface(api_urls):
-    """Render advanced voice interface with ChatGPT-like features"""
+def calculate_extended_metrics(result):
+    """Calculate extended metrics for comprehensive comparison"""
+    output = result.get("output", "")
+    inference_time = result.get("inference_time", 0)
     
-    voice_html = f"""
-    <div class="voice-container">
-        <h3 style="margin-top: 0; font-size: 24px;">🎤 Advanced Voice Assistant</h3>
-        <p style="margin: 10px 0; opacity: 0.9; font-size: 16px;">
-            Talk naturally with AI - just like ChatGPT Voice
-        </p>
-        
-        <div class="voice-controls">
-            <button id="voiceBtn" class="voice-btn" onclick="toggleRecording()" title="Click to start/stop recording">
-                🎤
-            </button>
-        </div>
-        
-        <!-- Audio Visualizer -->
-        <div id="audioVisualizer" class="audio-visualizer" style="display: none;">
-            <div class="visualizer-bar" style="height: 20px;"></div>
-            <div class="visualizer-bar" style="height: 35px;"></div>
-            <div class="visualizer-bar" style="height: 25px;"></div>
-            <div class="visualizer-bar" style="height: 40px;"></div>
-            <div class="visualizer-bar" style="height: 30px;"></div>
-            <div class="visualizer-bar" style="height: 35px;"></div>
-            <div class="visualizer-bar" style="height: 45px;"></div>
-            <div class="visualizer-bar" style="height: 25px;"></div>
-            <div class="visualizer-bar" style="height: 30px;"></div>
-            <div class="visualizer-bar" style="height: 20px;"></div>
-        </div>
-        
-        <div id="voiceStatus" class="voice-status status-ready">
-            🎯 Ready to listen - Click the microphone to start
-        </div>
-        
-        <div id="transcription" class="transcription-box">
-            Your speech will appear here in real-time...
-        </div>
-        
-        <!-- Voice Settings -->
-        <div class="voice-settings">
-            <div class="voice-setting">
-                <strong>🌍 Language</strong>
-                <select id="voiceLanguage" onchange="updateLanguage()">
-                    <option value="en">English</option>
-                    <option value="es">Spanish</option>
-                    <option value="fr">French</option>
-                    <option value="de">German</option>
-                    <option value="it">Italian</option>
-                    <option value="pt">Portuguese</option>
-                </select>
-            </div>
-            <div class="voice-setting">
-                <strong>🔊 Auto-play</strong>
-                <input type="checkbox" id="autoPlay" checked onchange="updateAutoPlay()">
-            </div>
-            <div class="voice-setting">
-                <strong>⚡ Continuous</strong>
-                <input type="checkbox" id="continuous" onchange="updateContinuous()">
-            </div>
-        </div>
-        
-        <!-- Response Controls -->
-        <div class="voice-response-controls">
-            <button class="mini-btn" onclick="clearTranscription()">🗑️ Clear</button>
-            <button class="mini-btn" onclick="downloadAudio()" id="downloadBtn" style="display: none;">💾 Download</button>
-            <button class="mini-btn" onclick="testMicrophone()">🎧 Test Mic</button>
-        </div>
-        
-        <div class="voice-tips">
-            💡 <strong>Pro Tips:</strong><br>
-            • Speak naturally and clearly<br>
-            • Use "Hey AI" to wake up continuous mode<br>
-            • Say "stop listening" to end continuous mode<br>
-            • Toggle auto-play for voice responses
-        </div>
-    </div>
+    if not output:
+        return {}
     
-    <script>
-    let isRecording = false;
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let recordingTimeout = null;
-    let audioContext = null;
-    let analyzer = null;
-    let microphone = null;
-    let continuousMode = false;
-    let autoPlay = true;
-    let currentLanguage = 'en';
-    let lastAudioBlob = null;
+    words = output.split()
+    sentences = [s.strip() for s in output.split('.') if s.strip()]
     
-    // Initialize audio context for visualization
-    async function initAudioContext() {{
-        try {{
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            analyzer = audioContext.createAnalyser();
-            analyzer.fftSize = 256;
-        }} catch (error) {{
-            console.log('Audio context initialization failed:', error);
-        }}
-    }}
+    extended_metrics = {}
     
-    async function toggleRecording() {{
-        const btn = document.getElementById('voiceBtn');
-        const status = document.getElementById('voiceStatus');
-        
-        if (!isRecording) {{
-            await startRecording();
-        }} else {{
-            stopRecording();
-        }}
-    }}
+    # Basic counts
+    extended_metrics["word_count"] = len(words)
+    extended_metrics["sentence_count"] = len(sentences)
+    extended_metrics["character_count"] = len(output)
     
-    async function startRecording() {{
-        try {{
-            const stream = await navigator.mediaDevices.getUserMedia({{ 
-                audio: {{
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                    sampleRate: 44100
-                }}
-            }});
-            
-            mediaRecorder = new MediaRecorder(stream, {{
-                mimeType: 'audio/webm;codecs=opus'
-            }});
-            audioChunks = [];
-            
-            // Setup audio visualization
-            if (audioContext) {{
-                microphone = audioContext.createMediaStreamSource(stream);
-                microphone.connect(analyzer);
-                startVisualization();
-            }}
-            
-            mediaRecorder.ondataavailable = event => {{
-                if (event.data.size > 0) {{
-                    audioChunks.push(event.data);
-                }}
-            }};
-            
-            mediaRecorder.onstop = async () => {{
-                const audioBlob = new Blob(audioChunks, {{ type: 'audio/webm' }});
-                lastAudioBlob = audioBlob;
-                await processAudio(audioBlob);
-                stopVisualization();
-            }};
-            
-            mediaRecorder.start();
-            isRecording = true;
-            
-            // Update UI
-            const btn = document.getElementById('voiceBtn');
-            const status = document.getElementById('voiceStatus');
-            const visualizer = document.getElementById('audioVisualizer');
-            
-            btn.classList.add('recording');
-            btn.innerHTML = '🛑';
-            btn.title = 'Click to stop recording';
-            status.className = 'voice-status status-recording';
-            status.innerHTML = '🔴 Recording... Speak naturally';
-            visualizer.style.display = 'flex';
-            
-            // Auto-stop after 30 seconds
-            recordingTimeout = setTimeout(() => {{
-                if (isRecording) {{
-                    stopRecording();
-                }}
-            }}, 30000);
-            
-        }} catch (error) {{
-            const status = document.getElementById('voiceStatus');
-            status.className = 'voice-status status-ready';
-            status.innerHTML = '❌ Microphone access denied. Please enable permissions and refresh.';
-            console.error('Error accessing microphone:', error);
-        }}
-    }}
+    # Vocabulary analysis
+    unique_words = set(word.lower() for word in words)
+    extended_metrics["vocabulary_diversity"] = len(unique_words) / len(words) if words else 0
+    extended_metrics["avg_sentence_length"] = len(words) / len(sentences) if sentences else 0
     
-    function stopRecording() {{
-        if (recordingTimeout) {{
-            clearTimeout(recordingTimeout);
-        }}
-        
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {{
-            mediaRecorder.stop();
-        }}
-        
-        isRecording = false;
-        
-        // Update UI
-        const btn = document.getElementById('voiceBtn');
-        const status = document.getElementById('voiceStatus');
-        
-        btn.classList.remove('recording');
-        btn.classList.add('processing');
-        btn.innerHTML = '⏳';
-        btn.title = 'Processing speech...';
-        status.className = 'voice-status status-processing';
-        status.innerHTML = '🤖 Processing speech and generating response...';
-        
-        // Stop all tracks
-        if (mediaRecorder && mediaRecorder.stream) {{
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        }}
-    }}
+    # Performance metrics
+    extended_metrics["tokens_per_second"] = len(words) / inference_time if inference_time > 0 else 0
     
-    function startVisualization() {{
-        if (!analyzer) return;
-        
-        const visualizer = document.getElementById('audioVisualizer');
-        const bars = visualizer.querySelectorAll('.visualizer-bar');
-        const bufferLength = analyzer.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-        
-        function animate() {{
-            if (!isRecording) return;
-            
-            analyzer.getByteFrequencyData(dataArray);
-            
-            bars.forEach((bar, index) => {{
-                const dataIndex = Math.floor(index * bufferLength / bars.length);
-                const height = Math.max(10, (dataArray[dataIndex] / 255) * 40);
-                bar.style.height = height + 'px';
-            }});
-            
-            requestAnimationFrame(animate);
-        }}
-        
-        animate();
-    }}
+    # Estimated metrics (would be calculated by actual models in production)
+    extended_metrics["coherence_score"] = min(1.0, 0.5 + (extended_metrics["vocabulary_diversity"] * 0.3))
+    extended_metrics["fluency_score"] = min(1.0, 0.6 + (extended_metrics["avg_sentence_length"] / 20))
+    extended_metrics["relevance_score"] = 0.8  # Would be calculated by semantic analysis
     
-    function stopVisualization() {{
-        const visualizer = document.getElementById('audioVisualizer');
-        visualizer.style.display = 'none';
-    }}
+    # Mock cost calculations (replace with actual API costs)
+    if "gpt" in result.get("model", "").lower():
+        extended_metrics["cost_per_token"] = 0.00003  # GPT-4o pricing
+    else:
+        extended_metrics["cost_per_token"] = 0.00001  # LLaMA (open source, hosting cost)
     
-    async function processAudio(audioBlob) {{
-        const status = document.getElementById('voiceStatus');
-        const transcription = document.getElementById('transcription');
-        const btn = document.getElementById('voiceBtn');
-        
-        try {{
-            // Show processing state
-            status.className = 'voice-status status-processing';
-            status.innerHTML = '🎯 Converting speech to text...';
-            transcription.innerHTML = '<em>Processing audio...</em>';
-            
-            // Convert blob to FormData for upload
-            const formData = new FormData();
-            formData.append('file', audioBlob, 'recording.webm');
-            
-            // Send to speech-to-text API
-            const response = await fetch('{api_urls["speech_to_text"]}', {{
-                method: 'POST',
-                body: formData
-            }});
-            
-            if (response.ok) {{
-                const result = await response.json();
-                const text = result.text || '';
-                
-                if (text.trim()) {{
-                    // Success - show transcription
-                    transcription.innerHTML = `<strong>You said:</strong> "${{text}}"`;
-                    
-                    // Check for continuous mode commands
-                    const lowerText = text.toLowerCase();
-                    if (lowerText.includes('stop listening') || lowerText.includes('end conversation')) {{
-                        continuousMode = false;
-                        document.getElementById('continuous').checked = false;
-                        status.className = 'voice-status status-ready';
-                        status.innerHTML = '✅ Speech recognized! Continuous mode disabled.';
-                    }} else {{
-                        status.className = 'voice-status status-processing';
-                        status.innerHTML = '🤖 Getting AI response...';
-                        
-                        // Send to voice chat API for AI response
-                        await getAIVoiceResponse(text);
-                    }}
-                    
-                    // Send to Streamlit
-                    window.parent.postMessage({{
-                        type: 'voiceInput',
-                        text: text,
-                        timestamp: Date.now(),
-                        language: currentLanguage
-                    }}, '*');
-                    
-                }} else {{
-                    // No speech detected
-                    transcription.innerHTML = '<em>No speech detected. Please try again.</em>';
-                    resetToReady();
-                }}
-            }} else {{
-                throw new Error(`HTTP ${{response.status}}: ${{response.statusText}}`);
-            }}
-            
-        }} catch (error) {{
-            console.error('Error processing audio:', error);
-            transcription.innerHTML = '<em>Error processing speech. Please try again.</em>';
-            resetToReady();
-        }}
-    }}
+    extended_metrics["total_cost"] = extended_metrics["cost_per_token"] * len(words)
     
-    async function getAIVoiceResponse(userText) {{
-        try {{
-            const payload = {{
-                text: userText,
-                messages: [], // Streamlit will handle this
-                params: {{
-                    temperature: 0.7,
-                    max_tokens: 150
-                }}
-            }};
-            
-            const response = await fetch('{api_urls["voice_chat"]}', {{
-                method: 'POST',
-                headers: {{
-                    'Content-Type': 'application/json'
-                }},
-                body: JSON.stringify(payload)
-            }});
-            
-            if (response.ok) {{
-                const result = await response.json();
-                const aiText = result.text || '';
-                const audioPath = result.audio_path;
-                
-                if (aiText) {{
-                    // Update status
-                    const status = document.getElementById('voiceStatus');
-                    status.className = 'voice-status status-ready';
-                    status.innerHTML = '✅ AI responded! Ready for next input.';
-                    
-                    // Show AI response in transcription area
-                    const transcription = document.getElementById('transcription');
-                    transcription.innerHTML = `
-                        <div><strong>You:</strong> "${{userText}}"</div>
-                        <div style="margin-top: 10px;"><strong>AI:</strong> "${{aiText}}"</div>
-                    `;
-                    
-                    // Auto-play AI response if enabled
-                    if (autoPlay && audioPath) {{
-                        await playAIResponse(audioPath);
-                    }}
-                    
-                    // Enable download button
-                    const downloadBtn = document.getElementById('downloadBtn');
-                    downloadBtn.style.display = 'inline-block';
-                    
-                    // Continue listening if continuous mode is on
-                    if (continuousMode) {{
-                        setTimeout(() => {{
-                            if (!isRecording) {{
-                                startRecording();
-                            }}
-                        }}, 2000);
-                    }}
-                }}
-            }}
-        }} catch (error) {{
-            console.error('Error getting AI response:', error);
-            resetToReady();
-        }}
-        
-        resetButtonState();
-    }}
-    
-    async function playAIResponse(audioPath) {{
-        try {{
-            // This would play the audio file returned by the API
-            // Implementation depends on how your API returns audio
-            console.log('Playing AI response audio:', audioPath);
-        }} catch (error) {{
-            console.error('Error playing AI response:', error);
-        }}
-    }}
-    
-    function resetToReady() {{
-        const status = document.getElementById('voiceStatus');
-        status.className = 'voice-status status-ready';
-        status.innerHTML = continuousMode ? 
-            '👂 Continuous listening mode - Say "stop listening" to end' :
-            '🎯 Ready for voice input - Click microphone to start';
-    }}
-    
-    function resetButtonState() {{
-        const btn = document.getElementById('voiceBtn');
-        btn.classList.remove('recording', 'processing');
-        btn.innerHTML = '🎤';
-        btn.title = 'Click to start recording';
-    }}
-    
-    function updateLanguage() {{
-        const select = document.getElementById('voiceLanguage');
-        currentLanguage = select.value;
-        
-        // Notify Streamlit about language change
-        window.parent.postMessage({{
-            type: 'languageChange',
-            language: currentLanguage
-        }}, '*');
-    }}
-    
-    function updateAutoPlay() {{
-        const checkbox = document.getElementById('autoPlay');
-        autoPlay = checkbox.checked;
-        
-        window.parent.postMessage({{
-            type: 'autoPlayChange',
-            autoPlay: autoPlay
-        }}, '*');
-    }}
-    
-    function updateContinuous() {{
-        const checkbox = document.getElementById('continuous');
-        continuousMode = checkbox.checked;
-        
-        if (continuousMode) {{
-            const status = document.getElementById('voiceStatus');
-            status.innerHTML = '👂 Continuous mode enabled - Say "Hey AI" to start or "stop listening" to end';
-        }} else {{
-            resetToReady();
-        }}
-        
-        window.parent.postMessage({{
-            type: 'continuousModeChange',
-            continuous: continuousMode
-        }}, '*');
-    }}
-    
-    function clearTranscription() {{
-        const transcription = document.getElementById('transcription');
-        transcription.innerHTML = 'Your speech will appear here in real-time...';
-        resetToReady();
-        
-        window.parent.postMessage({{
-            type: 'clearTranscription'
-        }}, '*');
-    }}
-    
-    function downloadAudio() {{
-        if (lastAudioBlob) {{
-            const url = URL.createObjectURL(lastAudioBlob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `voice_recording_${{Date.now()}}.webm`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }}
-    }}
-    
-    async function testMicrophone() {{
-        try {{
-            const stream = await navigator.mediaDevices.getUserMedia({{ audio: true }});
-            const status = document.getElementById('voiceStatus');
-            status.className = 'voice-status status-ready';
-            status.innerHTML = '✅ Microphone test successful!';
-            
-            // Stop the test stream
-            stream.getTracks().forEach(track => track.stop());
-            
-            setTimeout(() => {{
-                resetToReady();
-            }}, 2000);
-        }} catch (error) {{
-            const status = document.getElementById('voiceStatus');
-            status.className = 'voice-status status-ready';
-            status.innerHTML = '❌ Microphone test failed. Check permissions.';
-        }}
-    }}
-    
-    // Initialize on load
-    window.addEventListener('load', () => {{
-        initAudioContext();
-    }});
-    
-    // Listen for messages from Streamlit
-    window.addEventListener('message', function(event) {{
-        if (event.data.type === 'clearVoiceTranscription') {{
-            clearTranscription();
-        }} else if (event.data.type === 'updateVoiceSettings') {{
-            // Update settings from Streamlit
-            if (event.data.language) {{
-                currentLanguage = event.data.language;
-                document.getElementById('voiceLanguage').value = currentLanguage;
-            }}
-            if (event.data.autoPlay !== undefined) {{
-                autoPlay = event.data.autoPlay;
-                document.getElementById('autoPlay').checked = autoPlay;
-            }}
-        }}
-    }});
-    </script>
-    """
-    
-    # Render the enhanced voice interface
-    components.html(voice_html, height=500)
+    return extended_metrics
 
-# Voice Settings Panel
-def render_voice_settings():
-    """Render voice settings panel"""
-    with st.expander("🎤 Voice Settings", expanded=False):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Voice language selection
-            st.session_state.voice_language = st.selectbox(
-                "🌍 Voice Language",
-                ["en", "es", "fr", "de", "it", "pt"],
-                index=0,
-                format_func=lambda x: {
-                    "en": "🇺🇸 English",
-                    "es": "🇪🇸 Spanish", 
-                    "fr": "🇫🇷 French",
-                    "de": "🇩🇪 German",
-                    "it": "🇮🇹 Italian",
-                    "pt": "🇵🇹 Portuguese"
-                }[x]
-            )
-            
-            # Voice response settings
-            st.session_state.voice_response_enabled = st.checkbox(
-                "🔊 Enable Voice Responses",
-                value=st.session_state.voice_response_enabled,
-                help="AI will respond with synthesized speech"
-            )
-            
-            st.session_state.auto_speech = st.checkbox(
-                "⚡ Auto-play Responses",
-                value=st.session_state.auto_speech,
-                help="Automatically play AI voice responses"
-            )
-        
-        with col2:
-            # Voice quality settings
-            voice_speed = st.slider(
-                "🎵 Speech Speed",
-                min_value=0.5,
-                max_value=2.0,
-                value=1.0,
-                step=0.1,
-                help="Adjust AI speech speed"
-            )
-            
-            voice_pitch = st.slider(
-                "🎼 Voice Pitch",
-                min_value=0.5,
-                max_value=2.0,
-                value=1.0,
-                step=0.1,
-                help="Adjust AI voice pitch"
-            )
-            
-            # Continuous listening
-            continuous_listening = st.checkbox(
-                "👂 Continuous Listening",
-                value=False,
-                help="Keep listening after each response"
-            )
-        
-        # Voice diagnostics
-        if st.button("🔧 Test Voice System"):
-            test_voice_system()
-
-def test_voice_system():
-    """Test voice system functionality"""
-    with st.spinner("Testing voice system..."):
-        try:
-            # Test microphone access (simulated)
-            st.success("✅ Microphone access: Available")
-            
-            # Test speech recognition
-            st.success("✅ Speech recognition: Ready")
-            
-            # Test text-to-speech
-            st.success("✅ Text-to-speech: Ready")
-            
-            # Test API connectivity
-            config = load_config()
-            api_urls = get_api_urls(config)
-            session = create_session()
-            
-            try:
-                response = session.get(api_urls["health"], timeout=5)
-                if response.status_code == 200:
-                    st.success("✅ Voice API: Connected")
-                else:
-                    st.warning("⚠️ Voice API: Connection issues")
-            except:
-                st.error("❌ Voice API: Not available")
-            
-        except Exception as e:
-            st.error(f"❌ Voice system test failed: {e}")
-
-# Enhanced chat interface with voice
-def render_enhanced_chat():
-    """Render enhanced chat interface with voice capabilities"""
-    st.markdown("### 💬 AI Chat with Advanced Voice")
-    
-    # Voice interface section
-    if st.session_state.voice_enabled:
-        render_advanced_voice_interface(get_api_urls(load_config()))
-        
-        # Voice settings
-        render_voice_settings()
-        
-        st.markdown("---")
-    
-    # Chat history display
-    st.markdown("#### 💭 Conversation History")
-    
-    chat_container = st.container()
-    with chat_container:
-        for i, message in enumerate(st.session_state.messages):
-            with st.chat_message(message["role"]):
-                st.write(message["content"])
-                
-                # Add voice playback for assistant messages
-                if (message["role"] == "assistant" and 
-                    st.session_state.voice_response_enabled and
-                    st.session_state.last_audio_response):
-                    
-                    col1, col2, col3 = st.columns([1, 1, 4])
-                    with col1:
-                        if st.button("🔊", key=f"play_{i}", help="Play voice response"):
-                            play_audio_response(st.session_state.last_audio_response)
-                    with col2:
-                        if st.button("💾", key=f"download_{i}", help="Download audio"):
-                            download_audio_response(st.session_state.last_audio_response)
-    
-    # Text input with voice integration
-    st.markdown("#### ⌨️ Text Input")
-    
-    col1, col2 = st.columns([5, 1])
-    with col1:
-        user_input = st.text_input(
-            "Type your message or use voice input above...",
-            key="text_input",
-            placeholder="Ask me anything or click the microphone above to speak"
-        )
-    with col2:
-        send_button = st.button("Send", type="primary")
-    
-    # Process text input
-    if (user_input and send_button) or user_input:
-        process_user_input(user_input)
-    
-    # Handle voice input from JavaScript
-    handle_voice_messages()
-
-def process_user_input(text):
-    """Process user input (text or voice)"""
-    if not text.strip():
-        return
-    
-    # Add user message
-    st.session_state.messages.append({"role": "user", "content": text})
-    
-    # Get AI response
-    with st.spinner("🤖 AI is thinking..."):
-        ai_response = get_ai_response(text)
-        
-        if ai_response:
-            # Add assistant message
-            st.session_state.messages.append({"role": "assistant", "content": ai_response})
-            
-            # Generate voice response if enabled
-            if st.session_state.voice_response_enabled:
-                audio_response = generate_voice_response(ai_response)
-                if audio_response:
-                    st.session_state.last_audio_response = audio_response
-                    
-                    # Auto-play if enabled
-                    if st.session_state.auto_speech:
-                        play_audio_response(audio_response)
-    
-    # Clear text input and rerun
-    st.session_state.text_input = ""
-    st.rerun()
-
-def get_ai_response(user_text):
-    """Get AI response from the API"""
-    try:
-        config = load_config()
-        api_urls = get_api_urls(config)
-        session = create_session()
-        
-        # Prepare payload
-        payload = {
-            "task": "chat",
-            "messages": st.session_state.messages,
-            "params": {
-                "temperature": 0.7,
-                "max_tokens": 150,
-                "top_p": 0.9
-            }
-        }
-        
-        # Make API call
-        response = session.post(api_urls["process"], json=payload, timeout=60)
-        
-        if response.status_code == 200:
-            return response.text.strip()
-        else:
-            st.error(f"API Error: {response.status_code}")
-            return "Sorry, I'm having trouble processing your request right now."
-            
-    except Exception as e:
-        st.error(f"Error: {e}")
-        return "I apologize, but I encountered an error processing your request."
-
-def generate_voice_response(text):
-    """Generate voice response from text"""
-    try:
-        config = load_config()
-        api_urls = get_api_urls(config)
-        session = create_session()
-        
-        # Prepare voice generation payload
-        payload = {
-            "text": text,
-            "language": st.session_state.voice_language,
-            "speed": 1.0,  # You can make this configurable
-            "pitch": 1.0   # You can make this configurable
-        }
-        
-        # Call text-to-speech API (you'll need to implement this endpoint)
-        response = session.post(f"{api_urls['base']}/text_to_speech", json=payload, timeout=30)
-        
-        if response.status_code == 200:
-            return response.content  # Audio bytes
-        else:
-            st.warning("Voice generation failed")
-            return None
-            
-    except Exception as e:
-        st.warning(f"Voice generation error: {e}")
+def generate_comprehensive_charts(evaluation_df):
+    """Generate comprehensive interactive charts for model comparison"""
+    if evaluation_df is None or evaluation_df.empty:
         return None
-
-def play_audio_response(audio_data):
-    """Play audio response"""
-    if audio_data:
-        st.audio(audio_data, format="audio/mp3", autoplay=True)
-
-def download_audio_response(audio_data):
-    """Provide download link for audio response"""
-    if audio_data:
-        st.download_button(
-            label="💾 Download Audio",
-            data=audio_data,
-            file_name=f"ai_response_{int(time.time())}.mp3",
-            mime="audio/mp3"
-        )
-
-def handle_voice_messages():
-    """Handle voice messages from JavaScript"""
-    # This would be called when voice input is received
-    # In a real implementation, you'd need to set up proper message passing
     
-    # Check for voice input in session state (simulated)
-    if hasattr(st.session_state, 'pending_voice_input'):
-        voice_text = st.session_state.pending_voice_input
-        del st.session_state.pending_voice_input
-        
-        # Process voice input
-        process_user_input(voice_text)
-
-# Alternative simple voice recorder
-def render_simple_voice_recorder():
-    """Simple voice recorder fallback"""
-    try:
-        # Try to import audio recorder
-        from audio_recorder_streamlit import audio_recorder
-        
-        st.markdown("#### 🎙️ Simple Voice Recorder")
-        st.info("Click to record, speak, then click again to stop")
-        
-        audio_bytes = audio_recorder(
-            text="🎤 Record",
-            recording_color="#e74c3c",
-            neutral_color="#3498db",
-            icon_name="microphone",
-            icon_size="2x",
-            pause_threshold=2.0,
-            sample_rate=44100
-        )
-        
-        if audio_bytes:
-            st.audio(audio_bytes, format="audio/wav")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("🎯 Process Recording", type="primary"):
-                    process_voice_recording(audio_bytes)
-            with col2:
-                st.download_button(
-                    label="💾 Download",
-                    data=audio_bytes,
-                    file_name=f"recording_{int(time.time())}.wav",
-                    mime="audio/wav"
-                )
+    charts = {}
     
-    except ImportError:
-        st.info("💡 For simple voice recording, install: `pip install audio-recorder-streamlit`")
-        
-        # Manual file upload fallback
-        st.markdown("#### 📁 Upload Audio File")
-        uploaded_audio = st.file_uploader(
-            "Upload an audio file:",
-            type=["wav", "mp3", "m4a", "ogg", "webm"],
-            help="Upload an audio file for speech recognition"
-        )
-        
-        if uploaded_audio:
-            st.audio(uploaded_audio, format=f"audio/{uploaded_audio.type.split('/')[-1]}")
-            
-            if st.button("🎯 Process Uploaded Audio", type="primary"):
-                audio_bytes = uploaded_audio.read()
-                process_voice_recording(audio_bytes)
-
-def process_voice_recording(audio_bytes):
-    """Process voice recording and convert to text"""
-    try:
-        config = load_config()
-        api_urls = get_api_urls(config)
-        session = create_session()
-        
-        # Save audio to temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_file:
-            tmp_file.write(audio_bytes)
-            tmp_file_path = tmp_file.name
-        
-        try:
-            # Send to speech-to-text API
-            with open(tmp_file_path, 'rb') as f:
-                files = {"file": ("audio.wav", f, "audio/wav")}
-                response = session.post(api_urls["speech_to_text"], files=files, timeout=30)
-            
-            if response.status_code == 200:
-                result = response.json()
-                text = result.get("text", "")
-                
-                if text.strip():
-                    st.success(f"🎤 Recognized: {text}")
-                    
-                    # Process the recognized text
-                    process_user_input(text)
-                else:
-                    st.warning("No speech detected in audio")
-            else:
-                st.error("Speech recognition failed")
-                
-        finally:
-            # Clean up temporary file
-            if os.path.exists(tmp_file_path):
-                os.unlink(tmp_file_path)
-                
-    except Exception as e:
-        st.error(f"Voice processing error: {e}")
-
-# Health check
-def check_api_health(api_urls):
-    """Check API health status"""
-    try:
-        session = create_session()
-        response = session.get(api_urls["health"], timeout=10)
-        
-        if response.status_code == 200:
-            health_data = response.json()
-            return True, health_data
+    # Get metric columns by category
+    all_metrics = [col for col in evaluation_df.columns 
+                  if col not in ["model", "quality_category"]]
+    
+    metric_categories = {}
+    for metric in all_metrics:
+        if metric in METRICS_DEFINITIONS:
+            category = METRICS_DEFINITIONS[metric]["category"]
+            if category not in metric_categories:
+                metric_categories[category] = []
+            metric_categories[category].append(metric)
         else:
-            return False, f"API returned status code: {response.status_code}"
-    except requests.RequestException as e:
-        return False, str(e)
-    except Exception as e:
-        return False, f"Health check error: {e}"
-
-# Main processing function (updated for voice)
-def process_task(api_urls, payload):
-    """Process task with the API"""
-    try:
-        session = create_session()
-        
-        with st.spinner("Processing..."):
-            response = session.post(
-                api_urls["process"], 
-                json=payload, 
-                timeout=120
+            if "Other" not in metric_categories:
+                metric_categories["Other"] = []
+            metric_categories["Other"].append(metric)
+    
+    # 1. Category-wise comparison charts
+    for category, metrics in metric_categories.items():
+        if len(metrics) > 0:
+            fig = go.Figure()
+            
+            for metric in metrics:
+                if metric in evaluation_df.columns:
+                    fig.add_trace(go.Bar(
+                        name=metric,
+                        x=evaluation_df["model"],
+                        y=evaluation_df[metric],
+                        text=evaluation_df[metric].round(3),
+                        textposition="auto"
+                    ))
+            
+            fig.update_layout(
+                title=f"{category} Metrics Comparison",
+                xaxis_title="Model",
+                yaxis_title="Score",
+                template="plotly_white",
+                height=500,
+                barmode='group'
             )
-        
-        if response.status_code == 200:
-            try:
-                return True, response.json()
-            except json.JSONDecodeError:
-                return True, response.text
-        else:
-            try:
-                error_data = response.json()
-                error_msg = error_data.get("detail", f"API error: {response.status_code}")
-            except:
-                error_msg = f"API error: {response.status_code} - {response.text}"
             
-            return False, error_msg
-            
-    except requests.Timeout:
-        return False, "Request timed out. Please try again."
-    except requests.RequestException as e:
-        return False, f"Request failed: {str(e)}"
-    except Exception as e:
-        return False, f"Processing error: {str(e)}"
-
-# Display results with voice integration
-def display_results(results, task_type):
-    """Display task results with voice options"""
-    if isinstance(results, str):
-        st.markdown(f"**Response:** {results}")
+            charts[f"category_{category.lower().replace(' ', '_')}"] = fig
+    
+    # 2. Radar chart for overall comparison
+    if len(all_metrics) >= 3:
+        fig_radar = go.Figure()
         
-        # Add voice output option for text responses
-        if st.session_state.voice_response_enabled:
-            col1, col2 = st.columns([1, 4])
-            with col1:
-                if st.button("🔊 Speak Result"):
-                    audio_response = generate_voice_response(results)
-                    if audio_response:
-                        play_audio_response(audio_response)
-        return
-    
-    if not isinstance(results, dict):
-        st.error("Invalid response format")
-        return
-    
-    task_results = results.get("results", [])
-    evaluation = results.get("evaluation")
-    
-    if task_results:
-        st.markdown('<div class="sub-header">🤖 Model Results</div>', unsafe_allow_html=True)
-        
-        for i, result in enumerate(task_results):
-            model_name = result.get("model", "Unknown")
-            output = result.get("output")
-            inference_time = result.get("inference_time", 0)
-            success = result.get("success", True)
+        for idx, row in evaluation_df.iterrows():
+            # Normalize values for radar chart (0-1 scale)
+            values = []
+            labels = []
             
-            if success and output:
-                col1, col2, col3 = st.columns([4, 1, 1])
+            for metric in all_metrics:
+                if metric in row and pd.notna(row[metric]):
+                    # Normalize based on metric type
+                    if metric in METRICS_DEFINITIONS:
+                        if METRICS_DEFINITIONS[metric]["range"].endswith("(lower is better)"):
+                            # For "lower is better" metrics, invert the scale
+                            max_val = evaluation_df[metric].max()
+                            min_val = evaluation_df[metric].min()
+                            if max_val != min_val:
+                                normalized = 1 - ((row[metric] - min_val) / (max_val - min_val))
+                            else:
+                                normalized = 0.5
+                        else:
+                            # For "higher is better" metrics
+                            max_val = evaluation_df[metric].max()
+                            min_val = evaluation_df[metric].min()
+                            if max_val != min_val:
+                                normalized = (row[metric] - min_val) / (max_val - min_val)
+                            else:
+                                normalized = 0.5
+                    else:
+                        # Default normalization
+                        max_val = evaluation_df[metric].max()
+                        min_val = evaluation_df[metric].min()
+                        if max_val != min_val:
+                            normalized = (row[metric] - min_val) / (max_val - min_val)
+                        else:
+                            normalized = 0.5
+                    
+                    values.append(normalized)
+                    labels.append(metric)
+            
+            # Close the radar chart
+            if values:
+                values.append(values[0])
+                labels.append(labels[0])
                 
-                with col1:
-                    st.markdown(f"**{model_name}:**")
-                    st.write(output)
-                    st.caption(f"⏱️ Generation time: {inference_time:.2f}s")
-                
-                with col2:
-                    if st.button("🔊", key=f"speak_{i}", help="Speak this result"):
-                        audio_response = generate_voice_response(output)
-                        if audio_response:
-                            play_audio_response(audio_response)
-                
-                with col3:
-                    word_count = result.get("word_count")
-                    if word_count:
-                        st.caption(f"📝 Words: {word_count}")
-                
-                quality_issues = result.get("quality_issues", [])
-                if quality_issues:
-                    st.warning(f"Quality issues: {', '.join(quality_issues)}")
-                
-            else:
-                error_msg = result.get("error", "Unknown error")
-                st.error(f"**{model_name}:** {error_msg}")
-            
-            st.divider()
-    
-    if evaluation and len(evaluation) > 0:
-        st.markdown('<div class="sub-header">📊 Evaluation Metrics</div>', unsafe_allow_html=True)
+                fig_radar.add_trace(go.Scatterpolar(
+                    r=values,
+                    theta=labels,
+                    fill='toself',
+                    name=row["model"],
+                    line=dict(width=3)
+                ))
         
-        try:
-            eval_df = pd.DataFrame(evaluation)
-            st.dataframe(eval_df, use_container_width=True)
-        except Exception as e:
-            st.error(f"Error displaying evaluation: {e}")
-
-# Document upload with voice feedback
-def handle_document_upload(api_urls, uploaded_file):
-    """Handle document upload for RAG with voice feedback"""
-    try:
-        session = create_session()
-        
-        files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
-        
-        with st.spinner("Uploading and processing document..."):
-            response = session.post(api_urls["upload"], files=files, timeout=60)
-        
-        if response.status_code == 200:
-            result = response.json()
-            success_msg = f"✅ {result.get('message', 'Document uploaded successfully')}"
-            st.success(success_msg)
-            
-            # Voice feedback for successful upload
-            if st.session_state.voice_response_enabled and st.session_state.auto_speech:
-                audio_response = generate_voice_response("Document uploaded successfully")
-                if audio_response:
-                    play_audio_response(audio_response)
-            
-            filename = result.get("filename", uploaded_file.name)
-            text_length = result.get("text_length", 0)
-            word_count = result.get("word_count", 0)
-            
-            st.info(f"📄 **{filename}**: {text_length} characters, {word_count} words")
-            
-        else:
-            try:
-                error_data = response.json()
-                error_msg = error_data.get("detail", "Upload failed")
-            except:
-                error_msg = f"Upload failed: {response.status_code}"
-            
-            st.error(f"❌ {error_msg}")
-            
-    except Exception as e:
-        st.error(f"❌ Upload error: {e}")
-
-# Main app with voice integration
-def main():
-    """Main application with integrated voice features"""
-    initialize_session_state()
-    
-    config = load_config()
-    api_urls = get_api_urls(config)
-    
-    # Header
-    st.markdown('<div class="main-header">🤖 AI Workbench with Voice</div>', unsafe_allow_html=True)
-    st.markdown("*Advanced AI platform with ChatGPT-like voice interaction capabilities*")
-    
-    # Check API health
-    with st.spinner("Checking API status..."):
-        health_ok, health_info = check_api_health(api_urls)
-    
-    if not health_ok:
-        st.error(f"❌ **API Not Available:** {health_info}")
-        st.info("💡 Make sure to start the API server: `python main.py`")
-        st.stop()
-    
-    # Display API status
-    if isinstance(health_info, dict):
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.metric("API Status", "🟢 Healthy")
-        
-        with col2:
-            available_models = health_info.get("models_available", 0)
-            st.metric("Available Models", available_models)
-        
-        with col3:
-            model_names = health_info.get("model_names", [])
-            if model_names:
-                st.metric("Active Models", ", ".join(model_names))
-        
-        with col4:
-            voice_status = "🎤 Enabled" if st.session_state.voice_enabled else "🔇 Disabled"
-            st.metric("Voice System", voice_status)
-    
-    # Main interface tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["💬 Voice Chat", "📝 Summarization", "🌐 Translation", "⚙️ Settings"])
-    
-    with tab1:
-        # Enhanced chat with voice
-        render_enhanced_chat()
-        
-        # Simple voice recorder as fallback
-        with st.expander("🎙️ Alternative Voice Input", expanded=False):
-            render_simple_voice_recorder()
-    
-    with tab2:
-        # Summarization interface
-        render_summarization_interface(api_urls)
-    
-    with tab3:
-        # Translation interface
-        render_translation_interface(api_urls)
-    
-    with tab4:
-        # Settings and diagnostics
-        render_settings_interface(api_urls)
-
-def render_summarization_interface(api_urls):
-    """Render summarization interface"""
-    st.markdown("### 📝 Text Summarization")
-    
-    text_input = st.text_area(
-        "Enter text to summarize:",
-        height=200,
-        placeholder="Paste your text here..."
-    )
-    
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        reference = st.text_area(
-            "Reference summary (optional):",
-            height=100,
-            help="Provide a reference summary for evaluation"
+        fig_radar.update_layout(
+            polar=dict(
+                radialaxis=dict(
+                    visible=True,
+                    range=[0, 1]
+                )
+            ),
+            showlegend=True,
+            title="🕸️ Overall Model Performance Radar (Normalized)",
+            template="plotly_white",
+            height=600
         )
-    
-    with col2:
-        st.markdown("#### Parameters")
-        temperature = st.slider("Temperature", 0.1, 2.0, 0.7, 0.1)
-        max_tokens = st.slider("Max Tokens", 50, 500, 100, 10)
         
-        if st.button("🚀 Summarize", type="primary"):
-            if text_input.strip():
-                process_summarization(api_urls, text_input, reference, temperature, max_tokens)
-            else:
-                st.error("Please enter text to summarize")
+        charts["radar_overall"] = fig_radar
+    
+    # 3. Performance vs Quality scatter plot
+    performance_metrics = ["inference_time", "tokens_per_second", "throughput"]
+    quality_metrics = ["rouge1", "rouge2", "rougeL", "bertscore_f1", "coherence_score"]
+    
+    perf_metric = None
+    qual_metric = None
+    
+    for metric in performance_metrics:
+        if metric in evaluation_df.columns:
+            perf_metric = metric
+            break
+    
+    for metric in quality_metrics:
+        if metric in evaluation_df.columns:
+            qual_metric = metric
+            break
+    
+    if perf_metric and qual_metric:
+        fig_scatter = px.scatter(
+            evaluation_df,
+            x=perf_metric,
+            y=qual_metric,
+            color="model",
+            size="word_count" if "word_count" in evaluation_df.columns else [100]*len(evaluation_df),
+            hover_data=all_metrics,
+            title=f"⚡ Performance vs Quality: {qual_metric} vs {perf_metric}",
+            labels={
+                perf_metric: f"{perf_metric.replace('_', ' ').title()}",
+                qual_metric: f"{qual_metric.replace('_', ' ').title()}"
+            },
+            template="plotly_white",
+            height=500
+        )
+        
+        charts["scatter_perf_quality"] = fig_scatter
+    
+    # 4. Cost effectiveness analysis
+    if "total_cost" in evaluation_df.columns and qual_metric:
+        fig_cost = px.scatter(
+            evaluation_df,
+            x="total_cost",
+            y=qual_metric,
+            color="model",
+            size="word_count" if "word_count" in evaluation_df.columns else [100]*len(evaluation_df),
+            title=f"💰 Cost vs Quality Analysis",
+            labels={
+                "total_cost": "Total Cost (USD)",
+                qual_metric: f"{qual_metric.replace('_', ' ').title()}"
+            },
+            template="plotly_white",
+            height=500
+        )
+        
+        charts["cost_effectiveness"] = fig_cost
+    
+    # 5. Detailed metrics heatmap
+    if len(all_metrics) >= 2 and len(evaluation_df) >= 2:
+        # Normalize all metrics for heatmap
+        heatmap_data = evaluation_df[all_metrics].copy()
+        
+        for col in all_metrics:
+            if col in heatmap_data.columns:
+                col_max = heatmap_data[col].max()
+                col_min = heatmap_data[col].min()
+                if col_max != col_min:
+                    heatmap_data[col] = (heatmap_data[col] - col_min) / (col_max - col_min)
+                else:
+                    heatmap_data[col] = 0.5
+        
+        fig_heatmap = go.Figure(data=go.Heatmap(
+            z=heatmap_data.values,
+            x=[col.replace('_', ' ').title() for col in all_metrics],
+            y=evaluation_df["model"].tolist(),
+            colorscale='RdYlBu_r',
+            hoverongaps=False,
+            text=heatmap_data.round(3).values,
+            texttemplate="%{text}",
+            textfont={"size": 10},
+        ))
+        
+        fig_heatmap.update_layout(
+            title="🔥 Comprehensive Performance Heatmap (Normalized 0-1)",
+            xaxis_title="Metrics",
+            yaxis_title="Models",
+            template="plotly_white",
+            height=400
+        )
+        
+        charts["heatmap_comprehensive"] = fig_heatmap
+    
+    return charts
 
-def process_summarization(api_urls, text, reference, temperature, max_tokens):
-    """Process summarization request"""
-    payload = {
-        "task": "summarization",
-        "text": text,
-        "reference": reference,
-        "params": {
-            "temperature": temperature,
-            "max_tokens": max_tokens
-        },
-        "metrics": ["rouge1", "rouge2", "rougeL"]
+def create_model_comparison_summary(evaluation_df):
+    """Create a comprehensive model comparison summary"""
+    if evaluation_df is None or evaluation_df.empty:
+        return None
+    
+    summary = {
+        "winner_by_category": {},
+        "overall_scores": {},
+        "detailed_analysis": {}
     }
     
-    success, results = process_task(api_urls, payload)
+    models = evaluation_df["model"].tolist()
     
-    if success:
-        display_results(results, "summarization")
-    else:
-        st.error(f"❌ **Processing failed:** {results}")
-
-def render_translation_interface(api_urls):
-    """Render translation interface"""
-    st.markdown("### 🌐 Language Translation")
+    # Calculate category winners
+    metric_categories = {}
+    for metric in evaluation_df.columns:
+        if metric in METRICS_DEFINITIONS:
+            category = METRICS_DEFINITIONS[metric]["category"]
+            if category not in metric_categories:
+                metric_categories[category] = []
+            metric_categories[category].append(metric)
     
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        text_input = st.text_area(
-            "Enter text to translate:",
-            height=200,
-            placeholder="Enter text in any language..."
-        )
-        
-        reference = st.text_area(
-            "Reference translation (optional):",
-            height=100,
-            help="Provide a reference translation for evaluation"
-        )
-    
-    with col2:
-        target_lang = st.selectbox(
-            "Target Language:",
-            ["Spanish", "French", "German", "Italian", "Portuguese", "Chinese", "Japanese"]
-        )
-        
-        st.markdown("#### Parameters")
-        temperature = st.slider("Temperature", 0.1, 2.0, 0.7, 0.1, key="trans_temp")
-        max_tokens = st.slider("Max Tokens", 50, 500, 100, 10, key="trans_tokens")
-        
-        if st.button("🌍 Translate", type="primary"):
-            if text_input.strip() and target_lang:
-                process_translation(api_urls, text_input, target_lang, reference, temperature, max_tokens)
-            else:
-                st.error("Please enter text and select target language")
-
-def process_translation(api_urls, text, target_lang, reference, temperature, max_tokens):
-    """Process translation request"""
-    payload = {
-        "task": "translation",
-        "text": text,
-        "target_lang": target_lang,
-        "reference": reference,
-        "params": {
-            "temperature": temperature,
-            "max_tokens": max_tokens
-        },
-        "metrics": ["bleu", "meteor"]
-    }
-    
-    success, results = process_task(api_urls, payload)
-    
-    if success:
-        display_results(results, "translation")
-    else:
-        st.error(f"❌ **Processing failed:** {results}")
-
-def render_settings_interface(api_urls):
-    """Render settings and diagnostics interface"""
-    st.markdown("### ⚙️ System Settings & Diagnostics")
-    
-    # Voice system settings
-    st.markdown("#### 🎤 Voice System")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.session_state.voice_enabled = st.checkbox(
-            "Enable Voice Features",
-            value=st.session_state.voice_enabled,
-            help="Enable/disable all voice functionality"
-        )
-        
-        if st.session_state.voice_enabled:
-            st.success("🎤 Voice system is enabled")
+    for category, metrics in metric_categories.items():
+        category_scores = {}
+        for model in models:
+            model_data = evaluation_df[evaluation_df["model"] == model].iloc[0]
+            score = 0
+            count = 0
             
-            # Voice diagnostics
-            if st.button("🔧 Run Voice Diagnostics"):
-                test_voice_system()
-        else:
-            st.info("🔇 Voice system is disabled")
-    
-    with col2:
-        # API diagnostics
-        st.markdown("**API Status:**")
-        if st.button("🔄 Refresh API Status"):
-            health_ok, health_info = check_api_health(api_urls)
-            if health_ok:
-                st.success("✅ API is healthy")
-                st.json(health_info)
-            else:
-                st.error(f"❌ API issues: {health_info}")
-    
-    # Document upload
-    st.markdown("#### 📁 Document Upload")
-    uploaded_file = st.file_uploader(
-        "Upload document for RAG:",
-        type=["pdf", "png", "jpg", "jpeg"],
-        help="Upload documents to provide context for chat"
-    )
-    
-    if uploaded_file and st.button("📤 Upload Document"):
-        handle_document_upload(api_urls, uploaded_file)
-    
-    # Usage statistics
-    st.markdown("#### 📊 Usage Statistics")
-    if st.button("📈 Get Usage Stats"):
-        try:
-            session = create_session()
-            response = session.get(api_urls["usage"], timeout=10)
-            
-            if response.status_code == 200:
-                stats = response.json()
-                st.json(stats)
-            else:
-                st.warning("Could not fetch usage statistics")
-        except Exception as e:
-            st.error(f"Error fetching stats: {e}")
-
-if __name__ == "__main__":
-    main()
+            for metric in metrics:
+                if metric in evaluation_df.columns and pd.notna(model_data[metric]):
+                    metric_score = model_data[metric]
+                    
+                    # Normalize based on whether higher or lower is better
+                    if metric in METRICS_DEFINITIONS:
+                        if METRICS_DEFINITIONS[metric]["range"].endswith("(lower is better)"):
+                            # Invert score for "lower is better" metrics
+                            max_val = evaluation_df[metric].max()
+                            min_val = evaluation_df[metric].min()
+                            if max_val != min_val:
+                                normalized_score = 1 - ((metric_score - min_val) / (max_val - min_val))
+                            else:
+                                normalized_score = 0.5
+                        else:
+                            # Normal score for "higher is better" metrics
+                            max_val = evaluation_df[metric].max()
+                            min_val = evaluation_df[metric].min()
+                            if max_val != min_val:
+                                normalized_score = (metric_score - min_val) /

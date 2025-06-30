@@ -1,0 +1,9 @@
+{
+  "response": "This document appears to be a medical report for a patient named Mr. Sunil Kumar. It is a hematology report detailing the results of a Complete Blood Count (CBC) test. The report includes various blood parameters, their measured values, units, and the biological reference intervals for comparison. Here's a summary of the key information:\n\n- **Patient Details:**\n  - Name: Mr. Sunil Kumar\n  - Age: 48 years\n  - Gender: Male\n  - Accession No: 1025062388\n  - Referred By: Anju Goel\n  - Report Status: Final\n  - Sample Type: Blood\n  - Sample Collected on: 26/06/2025\n  -",
+  "inference_time": 3.223933696746826,
+  "usage": {
+    "prompt_tokens": 2719,
+    "completion_tokens": 150,
+    "total_tokens": 2869
+  }
+}
