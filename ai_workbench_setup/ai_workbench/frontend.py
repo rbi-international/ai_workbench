@@ -23,7 +23,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Enhanced CSS styling
+# frontend.py (only the CSS section is modified)
 st.markdown("""
 <style>
 /* Import modern font */
@@ -44,16 +44,18 @@ header {visibility: hidden;}
     padding-top: 1rem;
     padding-bottom: 2rem;
     max-width: 1400px;
+    background-color: #1F2937; /* Dark gray background for better readability */
+    color: #E5E7EB; /* Light text for contrast */
 }
 
 /* Professional header */
 .main-header {
     font-size: 2.8rem;
     font-weight: 700;
-    color: #1a1a1a;
+    color: #F9FAFB; /* Very light text for visibility */
     text-align: center;
     margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%); /* Light blue to purple gradient */
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -61,7 +63,7 @@ header {visibility: hidden;}
 
 .sub-header {
     font-size: 1.2rem;
-    color: #6b7280;
+    color: #D1D5DB; /* Light gray for readability */
     text-align: center;
     margin-bottom: 2rem;
     font-weight: 400;
@@ -69,134 +71,145 @@ header {visibility: hidden;}
 
 /* Sidebar styling */
 .sidebar .sidebar-content {
-    background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+    background: linear-gradient(180deg, #2D3748 0%, #4A5568 100%); /* Darker gradient for sidebar */
+    color: #E5E7EB; /* Light text */
 }
 
 /* Feature cards */
 .feature-card {
-    background: white;
+    background: #2D3748; /* Darker card background */
     border-radius: 12px;
     padding: 1.5rem;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid #4A5568; /* Matching border */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Stronger shadow */
     margin: 1rem 0;
+    color: #E5E7EB; /* Light text */
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .feature-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3); /* Enhanced hover effect */
 }
 
 /* Status indicators */
 .status-healthy {
-    color: #10b981;
-    font-weight: 600;
+    color: #34D399; /* Bright green */
+    font-weight: 700;
 }
 
 .status-warning {
-    color: #f59e0b;
-    font-weight: 600;
+    color: #FBBF24; /* Bright yellow */
+    font-weight: 700;
 }
 
 .status-error {
-    color: #ef4444;
-    font-weight: 600;
+    color: #F87171; /* Bright red */
+    font-weight: 700;
 }
 
 /* Metric cards */
 .metric-card {
-    background: white;
+    background: #2D3748; /* Darker background */
     border-radius: 8px;
     padding: 1rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid #4A5568; /* Matching border */
     text-align: center;
     margin: 0.5rem 0;
+    color: #E5E7EB; /* Light text */
 }
 
 /* Advanced feature sections */
 .advanced-section {
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    background: linear-gradient(135deg, #374151 0%, #4B5563 100%); /* Dark gradient */
     border-radius: 12px;
     padding: 2rem;
     margin: 1rem 0;
-    border: 1px solid #cbd5e1;
+    border: 1px solid #4A5568; /* Consistent border */
+    color: #E5E7EB; /* Light text */
 }
 
 /* Button styling */
 .stButton > button {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: linear-gradient(135deg, #60A5FA 0%, #A78BFA 100%); /* Matching gradient */
+    color: #FFFFFF; /* White text */
     border: none;
     border-radius: 8px;
     padding: 0.75rem 1.5rem;
-    font-weight: 500;
+    font-weight: 600;
     transition: all 0.2s ease;
 }
 
 .stButton > button:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4); /* Stronger hover shadow */
 }
 
 /* Tab styling */
 .stTabs [data-baseweb="tab-list"] {
     gap: 8px;
-    background: #f8fafc;
+    background: #374151; /* Darker tab background */
     border-radius: 8px;
     padding: 4px;
 }
 
 .stTabs [data-baseweb="tab"] {
     border-radius: 6px;
-    font-weight: 500;
+    font-weight: 600;
     padding: 0.5rem 1rem;
+    color: #D1D5DB; /* Light gray text */
 }
 
 .stTabs [aria-selected="true"] {
-    background: white;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    background: #2D3748; /* Darker selected tab */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); /* Stronger shadow */
+    color: #F9FAFB; /* Very light text */
 }
 
 /* Charts and visualizations */
 .chart-container {
-    background: white;
+    background: #2D3748; /* Darker background */
     border-radius: 12px;
     padding: 1rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid #4A5568; /* Matching border */
     margin: 1rem 0;
+    color: #E5E7EB; /* Light text */
 }
 
 /* Code blocks */
 .stCode {
-    background: #1f2937;
+    background: #111827; /* Very dark blue */
     border-radius: 8px;
-    border: 1px solid #374151;
+    border: 1px solid #1E293B; /* Darker border */
+    color: #E5E7EB; /* Light text */
 }
 
 /* Info boxes */
 .info-box {
-    background: #eff6ff;
-    border: 1px solid #3b82f6;
+    background: #93C5FD; /* Light blue */
+    border: 1px solid #3B82F6;
     border-radius: 8px;
     padding: 1rem;
     margin: 1rem 0;
+    color: #1E2937; /* Dark text for contrast */
 }
 
 .warning-box {
-    background: #fffbeb;
-    border: 1px solid #f59e0b;
+    background: #FCD34D; /* Light yellow */
+    border: 1px solid #F59E0B;
     border-radius: 8px;
     padding: 1rem;
     margin: 1rem 0;
+    color: #1E2937; /* Dark text */
 }
 
 .success-box {
-    background: #ecfdf5;
-    border: 1px solid #10b981;
+    background: #6EE7B7; /* Light green */
+    border: 1px solid #10B981;
     border-radius: 8px;
     padding: 1rem;
     margin: 1rem 0;
+    color: #1E2937; /* Dark text */
 }
 
 /* Responsive design */
