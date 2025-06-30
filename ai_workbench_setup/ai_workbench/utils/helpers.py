@@ -30,28 +30,27 @@ def validate_text(text: str) -> str:
 
 def clean_response_text(text: str) -> str:
     """
-    Clean response text by removing ALL types of newlines and formatting
+    Clean response text by removing unwanted formatting while preserving readability
     """
     if not text:
         return text
     
-    # Remove ALL variations of newlines
-    cleaned = text.replace('\\n', ' ')  # Escaped backslash + n
-    cleaned = cleaned.replace('\n', ' ')  # Escaped newline
-    cleaned = cleaned.replace('', ' ')   # Actual newline
-    cleaned = cleaned.replace('', ' ')   # Carriage return
-    cleaned = cleaned.replace('	', ' ')   # Tabs
+    # Remove only problematic escaped characters, preserve actual newlines
+    cleaned = text.replace('\\n', ' ')     # Only escaped \n
+    cleaned = cleaned.replace('\\r', ' ')   # Only escaped \r
+    cleaned = cleaned.replace('\\t', ' ')   # Only escaped \t
     
-    # Remove markdown formatting that creates visual breaks
-    cleaned = cleaned.replace('**', '')    # Bold markdown
-    cleaned = cleaned.replace('- **', '- ') # List items with bold
-    
-    # Clean up multiple spaces
+    # Clean up multiple spaces but preserve single spaces between words
     cleaned = re.sub(r'\s+', ' ', cleaned)
     
-    # Clean up bullet points and dashes
+    # Remove excessive punctuation repetition
+    cleaned = re.sub(r'([.!?])\1{2,}', r'\1', cleaned)
+    
+    # Clean up markdown formatting if needed
+    cleaned = cleaned.replace('**', '')    # Bold markdown
+    
+    # Clean up bullet points and dashes only if they're causing issues
     cleaned = re.sub(r'\s*-\s*-\s*', ' - ', cleaned)  # Multiple dashes
-    cleaned = re.sub(r'\s*\*\s*', ' ', cleaned)       # Asterisks used as bullets
     
     return cleaned.strip()
 

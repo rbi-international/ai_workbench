@@ -1,6 +1,6 @@
 from src.models.base_model import BaseModel
 from utils.logger import setup_logger
-from utils.helpers import validate_text, validate_model_params, clean_response_text
+from utils.helpers import validate_text, validate_model_params
 from typing import List, Dict, Any, Optional
 import time
 
@@ -92,9 +92,12 @@ class Summarizer:
             if not summary or not isinstance(summary, str):
                 raise ValueError("Model returned empty or invalid summary")
             
+            # Only basic cleaning - preserve the actual text structure
+            summary = summary.strip()
+            
             result = {
                 "model": model_name,
-                "output": clean_response_text(summary.strip()),
+                "output": summary,  # Don't apply aggressive cleaning here
                 "inference_time": inference_time,
                 "success": True,
                 "word_count": len(summary.split()),

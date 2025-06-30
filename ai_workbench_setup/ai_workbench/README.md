@@ -1,119 +1,224 @@
-AI Workbench 🚀
-A modular, production-grade AI platform for comparing LLaMA 3.1 and GPT-4o across tasks like summarization, translation, and chat. Packed with features like RAG, fine-tuning, voice I/O, model fusion, collaboration, ethics analysis, and cost control, this project is your go-to for experimenting with advanced AI workflows.
+# AI Workbench - Professional AI Platform
 
+A modern, professional AI workbench inspired by ChatGPT and Claude interfaces. This platform provides text summarization, translation, chat capabilities, and document intelligence without voice components for maximum compatibility and performance.
 
-📚 Table of Contents
+## ✨ Features
 
-Credits
-Features
-Setup
-Usage
-Cost Control
-Notes
+- **🤖 Professional Chat Interface** - ChatGPT/Claude-style conversational AI
+- **📝 Text Summarization** - Advanced summarization with multiple models
+- **🌐 Language Translation** - Multi-language translation capabilities  
+- **📄 Document Intelligence** - Upload and query documents (PDF, images, text)
+- **📊 Analytics & Monitoring** - Performance metrics and system monitoring
+- **🔄 Model Comparison** - Compare outputs from different AI models
+- **⚡ Professional UI** - Modern, responsive interface design
 
+## 🚀 Quick Start
 
-🎓 Credits
-This project was inspired by and built upon knowledge gained from the course "Generative AI with AI Agents: MCP for Developers" by DSwithBappy on Udemy. A huge thanks to DSwithBappy for providing invaluable insights and learning resources that significantly contributed to the development of this project.
+### Prerequisites
 
-🌟 Features
+- Python 3.8+
+- OpenAI API key
+- (Optional) Hugging Face token for LLaMA models
 
-Click to expand features
+### Installation
 
+1. **Clone the repository**
+```bash
+git clone <repository-url>
+cd ai_workbench
+```
 
-Tasks: Perform summarization, translation, and conversational chat with ease.
-Retrieval-Augmented Generation (RAG): Powered by Chroma vector database for context-aware responses.
-Fine-Tuning: LoRA-based fine-tuning for LLaMA models to customize performance.
-Playground: Interactive sliders for tweaking model parameters (temperature, top-p, max_tokens).
-Metrics: Evaluate outputs with ROUGE, BERTScore, BLEU, METEOR, and perplexity.
-Visualizations: Dynamic bar charts and radar plots for performance comparison.
-AI Tutor: Explains model performance with detailed insights.
-Crowdsourcing: Submit and moderate user-contributed datasets.
-Voice I/O: Speech-to-text and text-to-speech capabilities for seamless interaction.
-Model Fusion: Combine outputs from multiple models for enhanced results.
-Collaboration: Real-time WebSocket-based arena for model battles.
-Ethics: Sentiment and toxicity analysis to ensure responsible AI usage.
-Cost Control: Word limit enforcement (100 words/output) and API caching to minimize costs.
-
-
-
-
-🛠️ Setup
-Get started with AI Workbench in just a few steps!
-
-1. Install Dependencies
-
-Run the following command to install required Python packages:
+2. **Install dependencies**
+```bash
 pip install -r requirements.txt
+```
 
-Ensure you’re using Python 3.11.13 for compatibility with all libraries.
+3. **Set up environment variables**
+Create a `.env` file in the root directory:
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+HUGGINGFACE_TOKEN=your_huggingface_token_here
+```
 
+4. **Run the application**
+```bash
+python startup.py
+```
 
+This will start both the API server and frontend automatically.
 
-2. Set Up Environment
+### Manual Startup
 
+If you prefer to start services manually:
 
-Add OpenAI API Key: Edit ai_workbench/.env and replace your_openai_api_key_here with your actual OpenAI API key.OPENAI_API_KEY=your_actual_openai_api_key
+1. **Start API Server**
+```bash
+uvicorn src.api:app --host 127.0.0.1 --port 8000 --reload
+```
 
+2. **Start Frontend** (in a new terminal)
+```bash
+streamlit run frontend.py --server.port 8501
+```
 
-Install Tesseract OCR: Download from GitHub and add to PATH (e.g., C:\Program Files\Tesseract-OCR\tesseract.exe).
-Install PyAudio: Use pip install pyaudio. If errors occur, install portaudio via Chocolatey:choco install portaudio
+## 🌐 Access Points
 
+- **Frontend**: http://127.0.0.1:8501
+- **API**: http://127.0.0.1:8000  
+- **API Documentation**: http://127.0.0.1:8000/docs
 
-LLaMA Access: Ensure access to LLaMA 3.1 via Hugging Face (update config.yaml if using a different variant).
+## 📖 Usage Guide
 
+### Chat Interface
 
-3. Run FastAPI Server
+1. Navigate to the **Chat** tab
+2. Select your preferred AI model
+3. Type your message and press Enter
+4. The AI will respond in real-time
 
-Start the backend API server:
-python main.py
+### Text Summarization
 
-This runs the FastAPI server on http://0.0.0.0:8000.
+1. Go to the **Summarization** tab
+2. Paste your text in the input area
+3. Adjust parameters (temperature, max tokens, etc.)
+4. Click "Generate Summary"
+5. View results from multiple models with comparison metrics
 
+### Language Translation
 
+1. Select the **Translation** tab
+2. Enter text to translate
+3. Choose target language
+4. Adjust translation parameters
+5. Compare translations across models
 
-4. Run Streamlit Frontend
+### Document Intelligence
 
-Launch the interactive frontend:
-streamlit run frontend.py
+1. Visit the **Documents** tab
+2. Upload PDF, image, or text files
+3. Ask questions about your documents
+4. Get AI-powered answers based on document content
 
-Access the UI at http://localhost:8501.
+## ⚙️ Configuration
 
+Edit `config/config.yaml` to customize:
 
+- **Models**: Enable/disable OpenAI or LLaMA models
+- **API Settings**: Host, port, timeout configurations
+- **RAG Settings**: Vector database and embedding configurations
+- **Ethics**: Content filtering and safety thresholds
 
-5. Run Tests
+## 🏗️ Architecture
 
-Validate the setup with unit tests:
-pytest tests/
+```
+ai_workbench/
+├── src/
+│   ├── api.py              # FastAPI backend
+│   ├── models/             # AI model implementations
+│   ├── tasks/              # Task processors (chat, summarization, etc.)
+│   ├── rag/                # Document retrieval system
+│   └── ...
+├── frontend.py             # Streamlit frontend
+├── config/
+│   └── config.yaml         # Configuration file
+├── requirements.txt        # Python dependencies
+├── startup.py             # Easy startup script
+└── .env                   # Environment variables
+```
 
+## 🔧 API Endpoints
 
+- `POST /process` - Main processing endpoint for all tasks
+- `POST /upload_documents` - Upload documents for RAG
+- `GET /health` - Health check
+- `GET /models` - List available models
+- `GET /usage_stats` - Usage statistics
 
+## 🛠️ Development
 
-🚀 Usage
+### Adding New Models
 
-Open http://localhost:8501 in your browser.
-Select a task (summarization, translation, or chat).
-Adjust model parameters (temperature, top-p, max_tokens) via sliders.
-Upload documents or audio for RAG or voice input.
-Process tasks and explore outputs, metrics, visualizations, and AI Tutor explanations.
-Use the collaboration arena for real-time model battles.
-Monitor ethical AI metrics and costs via the dashboard.
+1. Create a new model class in `src/models/`
+2. Implement the `BaseModel` interface
+3. Add model configuration to `config.yaml`
+4. Register in the API initialization
 
+### Adding New Tasks
 
-💰 Cost Control
-Keep your API usage in check with these features:
+1. Create a task processor in `src/tasks/`
+2. Add task logic to the main API endpoint
+3. Create frontend interface in `frontend.py`
 
-Word Limit: Outputs capped at 100 words per response (configurable in config.yaml).
-API Caching: OpenAI responses cached in data/cache/ to reduce redundant calls.
-Usage Tracking: Monitor token and word usage in logs/cost_tracker.log.
-Estimated Cost: Approximately $0.50–$1.50 per 1000 API calls (based on GPT-4o pricing).
+## 📊 Monitoring & Analytics
 
+The platform includes comprehensive monitoring:
 
-📝 Notes
+- **System Health**: API status and component availability
+- **Usage Statistics**: Request counts, response times, costs
+- **Model Performance**: Speed and quality comparisons
+- **Error Tracking**: Detailed error logging and reporting
 
-GPU Recommended: Use a GPU for faster LLaMA inference.
-Voice Input: Requires a microphone and WAV files for speech-to-text.
-WebSocket Arena: Needs a JavaScript client for full interactivity.
-Cost Monitoring: Regularly check logs/cost_tracker.log to manage OpenAI API expenses.
+## 🔒 Security & Ethics
 
+- Content filtering for harmful material
+- Sentiment and toxicity analysis
+- Privacy protection for uploaded documents
+- Rate limiting and usage controls
 
-Feel free to contribute, report issues, or suggest enhancements via GitHub Issues!
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **API Key Errors**
+   - Verify your OpenAI API key in `.env`
+   - Check key permissions and quota
+
+2. **Model Loading Issues**
+   - Ensure sufficient system memory for LLaMA models
+   - Check CUDA availability for GPU acceleration
+
+3. **Document Processing Errors**
+   - Install pytesseract for image OCR
+   - Verify PDF file integrity
+
+4. **Port Conflicts**
+   - Change ports in `config.yaml` if needed
+   - Check for running services on ports 8000/8501
+
+### Performance Optimization
+
+- Use GPU acceleration for local models
+- Enable caching for repeated requests
+- Adjust model parameters for speed vs quality balance
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📞 Support
+
+For issues and questions:
+
+1. Check the troubleshooting section
+2. Review API documentation at `/docs`
+3. Open an issue on GitHub
+
+## 🚀 Future Enhancements
+
+- Additional model integrations
+- Advanced RAG capabilities
+- Multi-user support
+- Custom model fine-tuning
+- Real-time collaboration features
+
+---
+
+**Built with ❤️ for the AI community**

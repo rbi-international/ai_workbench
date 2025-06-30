@@ -12,58 +12,312 @@ import time
 import os
 from pathlib import Path
 from typing import Dict, List, Any, Optional
-import base64
 import tempfile
-import streamlit.components.v1 as components
-import io
 from datetime import datetime
 
 # Page configuration
 st.set_page_config(
-    page_title="AI Workbench - Enhanced",
+    page_title="AI Workbench",
     page_icon="🤖",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# Enhanced CSS for professional UI
+# Professional CSS styling inspired by ChatGPT/Claude
 st.markdown("""
 <style>
+/* Import modern font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Global styles */
+* {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Hide Streamlit branding */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+
+/* Main container */
+.main .block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    max-width: 1200px;
+}
+
+/* Professional header */
 .main-header {
-    font-size: 3rem;
-    color: #1f77b4;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 0.5rem;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
-.metric-card {
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    padding: 1.5rem;
-    border-radius: 15px;
-    margin: 0.5rem 0;
-    border-left: 5px solid #007bff;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.voice-container {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 20px;
-    padding: 25px;
-    margin: 15px 0;
+.sub-header {
+    font-size: 1.1rem;
+    color: #6b7280;
     text-align: center;
-    color: white;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    margin-bottom: 3rem;
+    font-weight: 400;
 }
 
-.success-message { color: #28a745; font-weight: bold; }
-.error-message { color: #dc3545; font-weight: bold; }
-.warning-message { color: #ffc107; font-weight: bold; }
+/* Chat container styling */
+.chat-container {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin: 1rem 0;
+    overflow: hidden;
+}
 
-.stSelectbox > div > div { background-color: rgba(255,255,255,0.9); }
-.stTextInput > div > div > input { background-color: rgba(255,255,255,0.9); }
+/* Message styling */
+.user-message {
+    background: #f3f4f6;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin: 1rem 0;
+    border-left: 4px solid #3b82f6;
+}
+
+.assistant-message {
+    background: #ffffff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin: 1rem 0;
+    border-left: 4px solid #10b981;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Input styling */
+.stTextInput > div > div > input {
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: border-color 0.2s ease;
+}
+
+.stTextInput > div > div > input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Button styling */
+.stButton > button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 2rem;
+    font-weight: 500;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.stButton > button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Sidebar styling */
+.css-1d391kg {
+    background: #f8fafc;
+    border-right: 1px solid #e5e7eb;
+}
+
+/* Tab styling */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 8px;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.stTabs [data-baseweb="tab"] {
+    border-radius: 6px;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.stTabs [aria-selected="true"] {
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Card styling */
+.metric-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    margin: 0.5rem 0;
+    transition: box-shadow 0.2s ease;
+}
+
+.metric-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Success/Error/Warning messages */
+.stSuccess {
+    background: #ecfdf5;
+    border: 1px solid #10b981;
+    border-radius: 8px;
+    color: #065f46;
+}
+
+.stError {
+    background: #fef2f2;
+    border: 1px solid #ef4444;
+    border-radius: 8px;
+    color: #991b1b;
+}
+
+.stWarning {
+    background: #fffbeb;
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    color: #92400e;
+}
+
+/* Loading spinner */
+.stSpinner {
+    text-align: center;
+    color: #667eea;
+}
+
+/* Selectbox styling */
+.stSelectbox > div > div {
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+}
+
+/* Text area styling */
+.stTextArea > div > div > textarea {
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Feature grid */
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.feature-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    border: 1px solid #e5e7eb;
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.feature-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.feature-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 0.5rem;
+}
+
+.feature-description {
+    color: #6b7280;
+    line-height: 1.6;
+}
+
+/* Chat input styling */
+.chat-input-container {
+    position: sticky;
+    bottom: 0;
+    background: white;
+    padding: 1rem;
+    border-top: 1px solid #e5e7eb;
+    border-radius: 12px 12px 0 0;
+}
+
+/* Model selector */
+.model-selector {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid #e5e7eb;
+}
+
+/* Results container */
+.results-container {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    margin: 1rem 0;
+    overflow: hidden;
+}
+
+.result-header {
+    background: #f8fafc;
+    padding: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 600;
+    color: #374151;
+}
+
+.result-content {
+    padding: 1.5rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .main .block-container {
+        padding: 1rem;
+    }
+    
+    .feature-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .main-header {
+        font-size: 2rem;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .metric-card, .chat-container, .results-container {
+        background: #1f2937;
+        border-color: #374151;
+        color: #f9fafb;
+    }
+    
+    .feature-card {
+        background: #1f2937;
+        border-color: #374151;
+        color: #f9fafb;
+    }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -74,12 +328,6 @@ def initialize_session_state():
         st.session_state.messages = []
     if "api_status" not in st.session_state:
         st.session_state.api_status = None
-    if "voice_enabled" not in st.session_state:
-        st.session_state.voice_enabled = False
-    if "voice_input_text" not in st.session_state:
-        st.session_state.voice_input_text = ""
-    if "last_audio_response" not in st.session_state:
-        st.session_state.last_audio_response = None
     if "selected_models" not in st.session_state:
         st.session_state.selected_models = []
     if "evaluation_results" not in st.session_state:
@@ -88,6 +336,8 @@ def initialize_session_state():
         st.session_state.chat_history = []
     if "uploaded_documents" not in st.session_state:
         st.session_state.uploaded_documents = []
+    if "current_page" not in st.session_state:
+        st.session_state.current_page = "chat"
 
 # Load configuration
 @st.cache_data
@@ -120,9 +370,6 @@ def get_api_urls(config):
         "base": base_url,
         "process": f"{base_url}/process",
         "upload": f"{base_url}/upload_documents",
-        "voice_chat": f"{base_url}/voice_chat",
-        "speech_to_text": f"{base_url}/speech_to_text",
-        "text_to_speech": f"{base_url}/text_to_speech",
         "health": f"{base_url}/health",
         "models": f"{base_url}/models",
         "usage": f"{base_url}/usage_stats"
@@ -145,170 +392,6 @@ def create_session():
     session.mount("https://", adapter)
     
     return session
-
-# Voice Interface Component
-def render_voice_interface(api_urls):
-    """Render enhanced voice interface"""
-    
-    voice_html = f"""
-    <div class="voice-container">
-        <h3 style="margin-top: 0;">🎤 Voice Assistant</h3>
-        <p style="margin: 10px 0; opacity: 0.9;">
-            Click to record, speak naturally, then click again to stop
-        </p>
-        
-        <div style="display: flex; justify-content: center; margin: 20px 0;">
-            <button id="voiceBtn" onclick="toggleRecording()" style="
-                background: rgba(255,255,255,0.2);
-                border: 3px solid rgba(255,255,255,0.3);
-                border-radius: 50%;
-                width: 80px;
-                height: 80px;
-                color: white;
-                font-size: 32px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-            ">🎤</button>
-        </div>
-        
-        <div id="voiceStatus" style="
-            margin: 20px 0;
-            padding: 15px;
-            border-radius: 12px;
-            background: rgba(40, 167, 69, 0.2);
-            color: white;
-            border: 2px solid rgba(255,255,255,0.3);
-        ">
-            Ready to listen - Click the microphone to start
-        </div>
-        
-        <div id="transcription" style="
-            margin-top: 20px;
-            padding: 15px;
-            background: rgba(255,255,255,0.9);
-            border-radius: 10px;
-            min-height: 50px;
-            color: #333;
-        ">
-            Your speech will appear here...
-        </div>
-        
-        <div style="margin-top: 15px;">
-            <button onclick="clearTranscription()" style="
-                background: rgba(255,255,255,0.2);
-                border: 1px solid rgba(255,255,255,0.3);
-                border-radius: 8px;
-                padding: 8px 15px;
-                color: white;
-                cursor: pointer;
-            ">🗑️ Clear</button>
-        </div>
-    </div>
-    
-    <script>
-    let isRecording = false;
-    let mediaRecorder = null;
-    let audioChunks = [];
-    
-    async function toggleRecording() {{
-        const btn = document.getElementById('voiceBtn');
-        const status = document.getElementById('voiceStatus');
-        
-        if (!isRecording) {{
-            try {{
-                const stream = await navigator.mediaDevices.getUserMedia({{ audio: true }});
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-                
-                mediaRecorder.ondataavailable = event => {{
-                    audioChunks.push(event.data);
-                }};
-                
-                mediaRecorder.onstop = async () => {{
-                    const audioBlob = new Blob(audioChunks, {{ type: 'audio/wav' }});
-                    await processAudio(audioBlob);
-                }};
-                
-                mediaRecorder.start();
-                isRecording = true;
-                
-                btn.style.background = 'rgba(220, 53, 69, 0.8)';
-                btn.innerHTML = '🛑';
-                status.style.background = 'rgba(220, 53, 69, 0.2)';
-                status.textContent = 'Recording... Click to stop';
-                
-            }} catch (error) {{
-                status.style.background = 'rgba(40, 167, 69, 0.2)';
-                status.textContent = 'Microphone access denied. Please enable permissions.';
-                console.error('Error accessing microphone:', error);
-            }}
-        }} else {{
-            mediaRecorder.stop();
-            isRecording = false;
-            
-            btn.style.background = 'rgba(255,255,255,0.2)';
-            btn.innerHTML = '🎤';
-            status.style.background = 'rgba(255, 193, 7, 0.2)';
-            status.textContent = 'Processing speech...';
-            
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        }}
-    }}
-    
-    async function processAudio(audioBlob) {{
-        const status = document.getElementById('voiceStatus');
-        const transcription = document.getElementById('transcription');
-        
-        try {{
-            const formData = new FormData();
-            formData.append('file', audioBlob, 'recording.wav');
-            
-            const response = await fetch('{api_urls["speech_to_text"]}', {{
-                method: 'POST',
-                body: formData
-            }});
-            
-            if (response.ok) {{
-                const result = await response.json();
-                const text = result.text || '';
-                
-                if (text.trim()) {{
-                    transcription.innerHTML = `<strong>You said:</strong> "${{text}}"`;
-                    
-                    // Send to Streamlit
-                    window.parent.postMessage({{
-                        type: 'voiceInput',
-                        text: text
-                    }}, '*');
-                    
-                    status.style.background = 'rgba(40, 167, 69, 0.2)';
-                    status.textContent = 'Speech recognized! Processing response...';
-                    
-                }} else {{
-                    transcription.innerHTML = '<em>No speech detected. Please try again.</em>';
-                    status.style.background = 'rgba(40, 167, 69, 0.2)';
-                    status.textContent = 'Ready for voice input';
-                }}
-            }} else {{
-                throw new Error(`HTTP ${{response.status}}`);
-            }}
-            
-        }} catch (error) {{
-            console.error('Error processing audio:', error);
-            transcription.innerHTML = '<em>Error processing speech. Please try again.</em>';
-            status.style.background = 'rgba(40, 167, 69, 0.2)';
-            status.textContent = 'Ready for voice input';
-        }}
-    }}
-    
-    function clearTranscription() {{
-        document.getElementById('transcription').innerHTML = 'Your speech will appear here...';
-        window.parent.postMessage({{ type: 'clearTranscription' }}, '*');
-    }}
-    </script>
-    """
-    
-    components.html(voice_html, height=350)
 
 # Health check
 def check_api_health(api_urls):
@@ -333,7 +416,7 @@ def process_task_with_metrics(api_urls, payload):
     try:
         session = create_session()
         
-        with st.spinner("Processing with AI models..."):
+        with st.spinner("🤖 Processing with AI models..."):
             response = session.post(
                 api_urls["process"], 
                 json=payload, 
@@ -362,11 +445,114 @@ def process_task_with_metrics(api_urls, payload):
     except Exception as e:
         return False, f"Processing error: {str(e)}"
 
+# Professional Chat Interface
+def render_chat_interface(api_urls):
+    """Render professional chat interface"""
+    
+    # Chat header
+    st.markdown("""
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <h1 class="main-header">AI Assistant</h1>
+        <p class="sub-header">Powered by advanced language models</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Model selection
+    with st.container():
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            available_models = get_available_models(api_urls)
+            if available_models:
+                selected_model = st.selectbox(
+                    "Choose AI Model:",
+                    available_models,
+                    key="model_selector",
+                    help="Select which AI model to use for responses"
+                )
+            else:
+                st.error("No models available")
+                return
+
+    # Chat container
+    chat_container = st.container()
+    
+    # Display chat history
+    with chat_container:
+        for i, message in enumerate(st.session_state.messages):
+            if message["role"] == "user":
+                st.markdown(f"""
+                <div class="user-message">
+                    <strong>You</strong><br>
+                    {message["content"]}
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="assistant-message">
+                    <strong>🤖 AI Assistant</strong><br>
+                    {message["content"]}
+                </div>
+                """, unsafe_allow_html=True)
+    
+    # Chat input
+    with st.container():
+        prompt = st.chat_input("Type your message here...", key="chat_input")
+        
+        if prompt:
+            # Add user message
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            
+            # Get AI response
+            with st.spinner("🤖 Thinking..."):
+                try:
+                    payload = {
+                        "task": "chat",
+                        "messages": st.session_state.messages,
+                        "params": {
+                            "temperature": 0.7,
+                            "max_tokens": 200,
+                            "top_p": 0.9
+                        }
+                    }
+                    
+                    success, result = process_task_with_metrics(api_urls, payload)
+                    
+                    if success:
+                        if isinstance(result, str):
+                            ai_response = result
+                        else:
+                            ai_response = result.get("response", "No response generated")
+                        
+                        st.session_state.messages.append({"role": "assistant", "content": ai_response})
+                        st.rerun()
+                    else:
+                        st.error(f"Error: {result}")
+                        
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+def get_available_models(api_urls):
+    """Get available models from API"""
+    try:
+        session = create_session()
+        response = session.get(api_urls["models"], timeout=10)
+        if response.status_code == 200:
+            models_data = response.json()
+            return [model["name"] for model in models_data.get("models", [])]
+        return ["gpt-4o"]  # Default fallback
+    except:
+        return ["gpt-4o"]  # Default fallback
+
 # Display results function
 def display_comprehensive_results(results, task_type):
     """Display results with comprehensive metrics and visualizations"""
     if isinstance(results, str):
-        st.markdown(f"**Response:** {results}")
+        st.markdown(f"""
+        <div class="results-container">
+            <div class="result-header">AI Response</div>
+            <div class="result-content">{results}</div>
+        </div>
+        """, unsafe_allow_html=True)
         return
     
     if not isinstance(results, dict):
@@ -391,7 +577,11 @@ def display_comprehensive_results(results, task_type):
                 
                 with st.expander(f"🔍 {model_name} Results", expanded=True):
                     if success and output:
-                        st.write(output)
+                        st.markdown(f"""
+                        <div class="results-container">
+                            <div class="result-content">{output}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
                         
                         col1, col2, col3 = st.columns(3)
                         with col1:
@@ -486,25 +676,6 @@ def display_metrics_tab(evaluation):
         with category_tabs[-1]:
             st.dataframe(df, use_container_width=True)
             
-            # Download options
-            col1, col2 = st.columns(2)
-            with col1:
-                csv = df.to_csv(index=False)
-                st.download_button(
-                    label="📥 Download CSV",
-                    data=csv,
-                    file_name=f"evaluation_metrics_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                    mime="text/csv"
-                )
-            with col2:
-                json_data = df.to_json(orient="records", indent=2)
-                st.download_button(
-                    label="📥 Download JSON",
-                    data=json_data,
-                    file_name=f"evaluation_metrics_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                    mime="application/json"
-                )
-        
     except Exception as e:
         st.error(f"Error displaying metrics: {e}")
 
@@ -553,165 +724,26 @@ def display_analysis_tab(evaluation, task_type):
                         else:
                             best_model = df.loc[df[metric].idxmin()]
                         
-                        st.markdown(f"**🥇 Best {criterion}**")
-                        st.write(f"**Model:** {best_model['model']}")
-                        st.write(f"**Score:** {best_model[metric]:.3f}")
-        
-        # Recommendations
-        st.markdown("#### 💡 Recommendations")
-        recommendations = generate_recommendations(df, task_type)
-        for rec in recommendations:
-            st.info(rec)
+                        st.markdown(f"""
+                        <div class="metric-card">
+                            <h4>🥇 Best {criterion}</h4>
+                            <p><strong>Model:</strong> {best_model['model']}</p>
+                            <p><strong>Score:</strong> {best_model[metric]:.3f}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
         
     except Exception as e:
         st.error(f"Error in analysis: {e}")
 
-def generate_recommendations(df, task_type):
-    """Generate intelligent recommendations based on results"""
-    recommendations = []
-    
-    try:
-        if len(df) == 0:
-            return ["No data available for recommendations"]
-        
-        # Speed recommendations
-        if "inference_time" in df.columns:
-            avg_time = df["inference_time"].mean()
-            if avg_time > 5:
-                recommendations.append("⏱️ Consider optimizing for speed - average inference time is high")
-            elif avg_time < 1:
-                recommendations.append("⚡ Excellent speed performance across models")
-        
-        # Quality recommendations
-        quality_metrics = ["rouge1", "rouge2", "rougeL", "bertscore_f1", "bleu"]
-        available_quality = [m for m in quality_metrics if m in df.columns]
-        
-        if available_quality:
-            quality_scores = []
-            for metric in available_quality:
-                quality_scores.extend(df[metric].dropna().tolist())
-            
-            if quality_scores:
-                avg_quality = sum(quality_scores) / len(quality_scores)
-                if avg_quality < 0.3:
-                    recommendations.append("📈 Quality scores are low - consider using reference examples or fine-tuning")
-                elif avg_quality > 0.7:
-                    recommendations.append("🎯 Excellent quality performance - current approach is working well")
-        
-        # Task-specific recommendations
-        if task_type == "summarization":
-            if "compression_ratio" in df.columns:
-                avg_compression = df["compression_ratio"].mean()
-                if avg_compression > 0.8:
-                    recommendations.append("📝 Summaries are quite long - consider reducing max_tokens")
-                elif avg_compression < 0.2:
-                    recommendations.append("📄 Summaries may be too brief - consider increasing min_tokens")
-        
-        elif task_type == "translation":
-            if "bleu" in df.columns:
-                avg_bleu = df["bleu"].mean()
-                if avg_bleu < 0.2:
-                    recommendations.append("🌍 Translation quality is low - try providing more context")
-        
-        if not recommendations:
-            recommendations.append("✅ Performance looks good overall - continue monitoring")
-        
-    except Exception as e:
-        recommendations.append(f"⚠️ Could not generate recommendations: {e}")
-    
-    return recommendations
-
-# Enhanced Chat Interface
-def render_chat_interface(api_urls):
-    """Render enhanced chat interface with voice support"""
-    st.markdown("### 💬 AI Chat Assistant")
-    
-    # Voice interface section
-    if st.checkbox("🎤 Enable Voice Chat", value=st.session_state.voice_enabled):
-        st.session_state.voice_enabled = True
-        render_voice_interface(api_urls)
-    else:
-        st.session_state.voice_enabled = False
-    
-    # Chat history display
-    chat_container = st.container()
-    with chat_container:
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.write(message["content"])
-    
-    # Chat input
-    if prompt := st.chat_input("Type your message or use voice input above..."):
-        process_chat_input(prompt, api_urls)
-
-def process_chat_input(text, api_urls):
-    """Process chat input from text or voice"""
-    if not text.strip():
-        return
-    
-    # Add user message
-    st.session_state.messages.append({"role": "user", "content": text})
-    
-    # Display user message
-    with st.chat_message("user"):
-        st.write(text)
-    
-    # Get AI response
-    with st.chat_message("assistant"):
-        with st.spinner("🤖 AI is thinking..."):
-            try:
-                session = create_session()
-                
-                payload = {
-                    "task": "chat",
-                    "messages": st.session_state.messages,
-                    "params": {
-                        "temperature": 0.7,
-                        "max_tokens": 150,
-                        "top_p": 0.9
-                    }
-                }
-                
-                response = session.post(api_urls["process"], json=payload, timeout=60)
-                
-                if response.status_code == 200:
-                    ai_response = response.text.strip()
-                    st.write(ai_response)
-                    st.session_state.messages.append({"role": "assistant", "content": ai_response})
-                    
-                    # Generate voice response if enabled
-                    if st.session_state.voice_enabled:
-                        generate_voice_response(ai_response, api_urls)
-                else:
-                    st.error(f"API Error: {response.status_code}")
-                    
-            except Exception as e:
-                st.error(f"Error: {e}")
-
-def generate_voice_response(text, api_urls):
-    """Generate voice response from text"""
-    try:
-        session = create_session()
-        
-        payload = {
-            "text": text,
-            "language": "en",
-            "speed": 1.0
-        }
-        
-        response = session.post(api_urls["text_to_speech"], json=payload, timeout=30)
-        
-        if response.status_code == 200:
-            st.session_state.last_audio_response = response.content
-            st.audio(response.content, format="audio/mp3", autoplay=True)
-        
-    except Exception as e:
-        st.warning(f"Voice generation failed: {e}")
-
 # Summarization Interface
 def render_summarization_interface(api_urls):
-    """Enhanced summarization interface"""
-    st.markdown("### 📝 Advanced Text Summarization")
+    """Professional summarization interface"""
+    st.markdown("""
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <h1 class="main-header">📝 Text Summarization</h1>
+        <p class="sub-header">Generate concise summaries from your text</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     col1, col2 = st.columns([2, 1])
     
@@ -719,22 +751,23 @@ def render_summarization_interface(api_urls):
         text_input = st.text_area(
             "Enter text to summarize:",
             height=200,
-            placeholder="Paste your text here..."
+            placeholder="Paste your text here...",
+            help="Enter the text you want to summarize"
         )
         
         reference = st.text_area(
-            "Reference summary (optional - enables comprehensive metrics):",
+            "Reference summary (optional):",
             height=100,
             help="Provide a reference summary for detailed evaluation metrics"
         )
     
     with col2:
         st.markdown("#### ⚙️ Parameters")
-        temperature = st.slider("🌡️ Temperature", 0.1, 2.0, 0.7, 0.1)
-        max_tokens = st.slider("📏 Max Tokens", 50, 500, 100, 10)
-        min_tokens = st.slider("📐 Min Tokens", 10, 200, 30, 5)
+        temperature = st.slider("🌡️ Temperature", 0.1, 2.0, 0.7, 0.1, help="Controls randomness in generation")
+        max_tokens = st.slider("📏 Max Tokens", 50, 500, 100, 10, help="Maximum length of summary")
+        min_tokens = st.slider("📐 Min Tokens", 10, 200, 30, 5, help="Minimum length of summary")
     
-    if st.button("🚀 Generate Summary", type="primary"):
+    if st.button("🚀 Generate Summary", type="primary", use_container_width=True):
         if text_input.strip():
             payload = {
                 "task": "summarization",
@@ -759,8 +792,13 @@ def render_summarization_interface(api_urls):
 
 # Translation Interface
 def render_translation_interface(api_urls):
-    """Enhanced translation interface"""
-    st.markdown("### 🌐 Advanced Language Translation")
+    """Professional translation interface"""
+    st.markdown("""
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <h1 class="main-header">🌐 Language Translation</h1>
+        <p class="sub-header">Translate text between languages</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     col1, col2 = st.columns([2, 1])
     
@@ -768,11 +806,12 @@ def render_translation_interface(api_urls):
         text_input = st.text_area(
             "Enter text to translate:",
             height=200,
-            placeholder="Enter text in any language..."
+            placeholder="Enter text in any language...",
+            help="Enter the text you want to translate"
         )
         
         reference = st.text_area(
-            "Reference translation (optional - enables comprehensive metrics):",
+            "Reference translation (optional):",
             height=100,
             help="Provide a reference translation for detailed evaluation"
         )
@@ -781,13 +820,14 @@ def render_translation_interface(api_urls):
         target_lang = st.selectbox(
             "🎯 Target Language:",
             ["Spanish", "French", "German", "Italian", "Portuguese", 
-             "Chinese", "Japanese", "Korean", "Arabic", "Hindi", "Russian"]
+             "Chinese", "Japanese", "Korean", "Arabic", "Hindi", "Russian"],
+            help="Select the target language for translation"
         )
         
-        temperature = st.slider("🌡️ Temperature", 0.1, 2.0, 0.3, 0.1)
-        max_tokens = st.slider("📏 Max Tokens", 50, 500, 200, 10)
+        temperature = st.slider("🌡️ Temperature", 0.1, 2.0, 0.3, 0.1, help="Controls randomness in translation")
+        max_tokens = st.slider("📏 Max Tokens", 50, 500, 200, 10, help="Maximum length of translation")
     
-    if st.button("🌐 Translate Text", type="primary"):
+    if st.button("🌐 Translate Text", type="primary", use_container_width=True):
         if text_input.strip():
             payload = {
                 "task": "translation",
@@ -813,7 +853,12 @@ def render_translation_interface(api_urls):
 # Document Upload Interface
 def render_document_interface(api_urls):
     """Document upload and processing interface"""
-    st.markdown("### 📄 Document Intelligence")
+    st.markdown("""
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <h1 class="main-header">📄 Document Intelligence</h1>
+        <p class="sub-header">Upload and analyze your documents</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # File upload
     uploaded_files = st.file_uploader(
@@ -846,7 +891,11 @@ def render_document_interface(api_urls):
     if st.session_state.uploaded_documents:
         st.markdown("#### 📚 Uploaded Documents")
         for doc in st.session_state.uploaded_documents:
-            st.info(f"📄 {doc}")
+            st.markdown(f"""
+            <div class="metric-card">
+                📄 {doc}
+            </div>
+            """, unsafe_allow_html=True)
     
     # Document query interface
     st.markdown("#### ❓ Ask Questions About Your Documents")
@@ -857,7 +906,7 @@ def render_document_interface(api_urls):
         help="Ask questions about the content of your uploaded documents"
     )
     
-    if st.button("🔍 Search Documents") and question:
+    if st.button("🔍 Search Documents", use_container_width=True) and question:
         with st.spinner("Searching through documents..."):
             try:
                 # Use chat endpoint with document context
@@ -877,8 +926,14 @@ def render_document_interface(api_urls):
                     answer = response.text
                     
                     st.markdown("#### 💡 Answer")
-                    st.info(f"**Question:** {question}")
-                    st.success(f"**Answer:** {answer}")
+                    st.markdown(f"""
+                    <div class="user-message">
+                        <strong>Question:</strong> {question}
+                    </div>
+                    <div class="assistant-message">
+                        <strong>Answer:</strong> {answer}
+                    </div>
+                    """, unsafe_allow_html=True)
                 else:
                     st.error("Failed to process document query")
                     
@@ -888,19 +943,24 @@ def render_document_interface(api_urls):
 # Analytics Interface
 def render_analytics_interface(api_urls):
     """Analytics and system monitoring interface"""
-    st.markdown("### 📈 System Analytics & Performance")
+    st.markdown("""
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <h1 class="main-header">📈 System Analytics</h1>
+        <p class="sub-header">Monitor performance and usage statistics</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # System health check
-    col1, col2 = st.columns([1, 1])
+    col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("🔄 Refresh System Status"):
+        if st.button("🔄 Refresh System Status", use_container_width=True):
             with st.spinner("Checking system health..."):
                 is_healthy, health_data = check_api_health(api_urls)
                 st.session_state.api_status = health_data
     
     with col2:
-        if st.button("📊 Get Usage Statistics"):
+        if st.button("📊 Get Usage Statistics", use_container_width=True):
             with st.spinner("Fetching usage data..."):
                 try:
                     session = create_session()
@@ -919,41 +979,61 @@ def render_analytics_interface(api_urls):
         
         with col1:
             status = st.session_state.api_status.get("status", "unknown")
-            st.metric("API Status", "✅ Healthy" if status == "healthy" else "❌ Issues")
+            if status == "healthy":
+                st.markdown("""
+                <div class="metric-card">
+                    <h4>API Status</h4>
+                    <p style="color: #10b981;">✅ Healthy</p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                <div class="metric-card">
+                    <h4>API Status</h4>
+                    <p style="color: #ef4444;">❌ Issues</p>
+                </div>
+                """, unsafe_allow_html=True)
         
         with col2:
             models_available = st.session_state.api_status.get("models_available", 0)
-            st.metric("Models Available", models_available)
+            st.markdown(f"""
+            <div class="metric-card">
+                <h4>Models Available</h4>
+                <p>{models_available}</p>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col3:
-            voice_status = st.session_state.api_status.get("voice_system", {})
-            voice_available = voice_status.get("available", False)
-            st.metric("Voice System", "🎤 Ready" if voice_available else "❌ Offline")
-        
-        with col4:
             components = st.session_state.api_status.get("components", {})
             active_components = sum(1 for comp in components.values() if comp)
-            st.metric("Active Components", f"{active_components}/{len(components)}")
+            st.markdown(f"""
+            <div class="metric-card">
+                <h4>Active Components</h4>
+                <p>{active_components}/{len(components)}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col4:
+            timestamp = datetime.fromtimestamp(st.session_state.api_status.get("timestamp", 0))
+            st.markdown(f"""
+            <div class="metric-card">
+                <h4>Last Check</h4>
+                <p>{timestamp.strftime('%H:%M:%S')}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+# Navigation
+def render_navigation():
+    """Render professional navigation"""
+    st.markdown("""
+    <div style="background: white; padding: 1rem; border-bottom: 1px solid #e5e7eb; margin-bottom: 2rem;">
+        <div style="max-width: 1200px; margin: 0 auto;">
+    """, unsafe_allow_html=True)
     
-    # Usage statistics
-    if hasattr(st.session_state, 'usage_stats'):
-        st.markdown("#### 📊 Usage Statistics")
-        
-        stats = st.session_state.usage_stats.get("usage_stats", {})
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            total_requests = stats.get("total_requests", 0)
-            st.metric("Total Requests", total_requests)
-        
-        with col2:
-            avg_response_time = stats.get("avg_response_time", 0)
-            st.metric("Avg Response Time", f"{avg_response_time:.2f}s")
-        
-        with col3:
-            total_cost = stats.get("total_cost", 0.0)
-            st.metric("Total Cost", f"${total_cost:.4f}")
+    # Navigation tabs
+    tabs = st.tabs(["💬 Chat", "📝 Summarization", "🌐 Translation", "📄 Documents", "📈 Analytics"])
+    
+    return tabs
 
 # Main Application
 def main():
@@ -964,103 +1044,32 @@ def main():
     config = load_config()
     api_urls = get_api_urls(config)
     
-    # Main header
-    st.markdown('<h1 class="main-header">🤖 AI Workbench</h1>', unsafe_allow_html=True)
-    st.markdown("**Your Complete AI Assistant Platform**")
+    # Navigation
+    tabs = render_navigation()
     
-    # Sidebar navigation
-    with st.sidebar:
-        st.markdown("## 🧭 Navigation")
-        
-        tab_selection = st.selectbox(
-            "Choose a feature:",
-            [
-                "📊 Overview",
-                "💬 Chat Assistant", 
-                "📝 Text Summarization",
-                "🌐 Language Translation",
-                "📄 Document Intelligence",
-                "📈 Analytics & Monitoring"
-            ]
-        )
-        
-        # System status in sidebar
-        st.markdown("---")
-        st.markdown("### 🔧 Quick Status")
-        
-        if st.button("🔄 Check Health"):
-            with st.spinner("Checking..."):
-                is_healthy, health_data = check_api_health(api_urls)
-                if is_healthy:
-                    st.success("✅ System Healthy")
-                else:
-                    st.error(f"❌ Issues: {health_data}")
-    
-    # Main content area
-    if tab_selection == "📊 Overview":
-        st.markdown("## 🌟 Welcome to AI Workbench!")
-        
-        st.markdown("""
-        Your complete AI assistant platform with multi-model support, voice capabilities, 
-        and document intelligence. Choose a feature from the sidebar to get started.
-        """)
-        
-        # Feature cards
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("""
-            ### 🤖 Multi-Model AI
-            - Compare responses from different AI models
-            - OpenAI GPT and Meta LLaMA support
-            - Real-time performance metrics
-            """)
-            
-            st.markdown("""
-            ### 📄 Document Intelligence
-            - Upload PDFs, images, and text files
-            - Ask questions about document content
-            - RAG-powered responses
-            """)
-        
-        with col2:
-            st.markdown("""
-            ### 🎤 Voice Interface
-            - Speech-to-text input
-            - Text-to-speech responses
-            - Natural conversation flow
-            """)
-            
-            st.markdown("""
-            ### 📊 Advanced Analytics
-            - Performance monitoring
-            - Usage statistics
-            - Quality metrics and insights
-            """)
-    
-    elif tab_selection == "💬 Chat Assistant":
+    # Tab content
+    with tabs[0]:  # Chat
         render_chat_interface(api_urls)
     
-    elif tab_selection == "📝 Text Summarization":
+    with tabs[1]:  # Summarization
         render_summarization_interface(api_urls)
     
-    elif tab_selection == "🌐 Language Translation":
+    with tabs[2]:  # Translation
         render_translation_interface(api_urls)
     
-    elif tab_selection == "📄 Document Intelligence":
+    with tabs[3]:  # Documents
         render_document_interface(api_urls)
     
-    elif tab_selection == "📈 Analytics & Monitoring":
+    with tabs[4]:  # Analytics
         render_analytics_interface(api_urls)
     
     # Footer
-    st.markdown("---")
-    st.markdown(
-        "<div style='text-align: center; color: #666; padding: 20px;'>"
-        "🤖 AI Workbench - Powered by OpenAI, Meta LLaMA, and Streamlit"
-        "</div>", 
-        unsafe_allow_html=True
-    )
+    st.markdown("""
+    <div style="text-align: center; color: #6b7280; padding: 2rem; margin-top: 3rem; border-top: 1px solid #e5e7eb;">
+        <p>🤖 AI Workbench - Professional AI Platform</p>
+        <p style="font-size: 0.875rem;">Powered by OpenAI and Streamlit</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()

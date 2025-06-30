@@ -60,11 +60,6 @@ cache:
   path: data/cache/
   enabled: true
 
-voice:
-  input_enabled: true
-  output_enabled: true
-  language: en
-
 directories:
   data: data
   logs: logs
